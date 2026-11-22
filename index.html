@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ポケツイ イベントカレンダー</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Kaisei+Decol:wght@500;700&family=M+PLUS+Rounded+1c:wght@500;700;800&family=Shippori+Mincho:wght@600;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        @import "tailwindcss";
+        html {
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
+            font-family: 'Shippori Mincho', 'Kaisei Decol', serif;
+        }
+        /* 上のタイトルと統一感が出るよう、見出し・強調箇所に装飾明朝＆上品なウェイトを適用 */
+        #currentMonthLabel,
+        #selectedDateHeading,
+        #selectedDateEvents .text-sm,
+        #highlightBannerList .text-xs.truncate {
+            font-family: 'Kaisei Decol', 'Shippori Mincho', serif !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.04em;
+        }
+        /* 太字クラスのゴツさを和らげて繊細なフォントバランスに統一 */
+        .font-extrabold {
+            font-weight: 700 !important;
+        }
+        .font-bold {
+            font-weight: 600 !important;
+        }
+        body {
+            background-color: #e4f2ff;
+            color: #5c4b5e;
+        }
+        /* スクロール時にカクつかないGPU固定背景レイヤー */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            transform: translateZ(0);
+            will-change: transform;
+            background-color: #e4f2ff;
+            background-image:
+                radial-gradient(circle at 15% 18%, rgba(255, 255, 255, 0.96) 0 44px, transparent 45px),
+                radial-gradient(circle at 24% 16%, rgba(255, 255, 255, 0.96) 0 58px, transparent 59px),
+                radial-gradient(circle at 33% 19%, rgba(255, 255, 255, 0.96) 0 40px, transparent 41px),
+                radial-gradient(circle at 75% 42%, rgba(255, 255, 255, 0.90) 0 48px, transparent 49px),
+                radial-gradient(circle at 84% 40%, rgba(255, 255, 255, 0.90) 0 60px, transparent 61px),
+                radial-gradient(circle at 92% 43%, rgba(255, 255, 255, 0.90) 0 38px, transparent 39px),
+                linear-gradient(180deg, #cde8ff 0%, #fad0e8 52%, #cce9ff 100%);
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* メインコンテナ（後ろの雲が透けるよう霧を控えめに） */
+        body > div {
+            background: rgba(255, 255, 255, 0.20) !important;
+            backdrop-filter: blur(2px);
+            border-left: 2px solid rgba(255, 255, 255, 0.85);
+            border-right: 2px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 30px rgba(186, 230, 253, 0.45);
+        }
+
+        /* 枠なしの透かしフェードヘッダー */
+        div.sticky.top-0 {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.68) 0%, rgba(255, 255, 255, 0.32) 68%, rgba(255, 255, 255, 0) 100%) !important;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
+            box-shadow: none !important;
+            border: none !important;
+            filter: none !important;
+            padding: 0 !important;
+            display: block !important;
+        }
+        header.bg-gradient-to-r {
+            position: relative;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 10px 16px 8px !important;
+            box-shadow: none !important;
+        }
+        header.bg-gradient-to-r::after {
+            content: none !important;
+        }
+        /* 3のゆめかわ・ファンタジーロゴ風（装飾明朝 Kaisei Decol × ラベンダー〜スカイブルー） */
+        header h1.cloud-title-badge {
+            font-family: 'Kaisei Decol', serif !important;
+            font-weight: 700 !important;
+            font-size: 1.12rem !important;
+            background: transparent !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            letter-spacing: 0.10em !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        header h1.cloud-title-badge .title-main {
+            background: linear-gradient(135deg, #6d5cae 0%, #5b78c7 52%, #3b82b6 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 1px 6px rgba(255, 255, 255, 0.95));
+        }
+        header h1.cloud-title-badge .title-sub {
+            font-family: 'Cormorant Garamond', serif !important;
+            font-style: italic;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.22em;
+            color: #7c6fb0;
+        }
+
+        /* 画面右下の固定ボタン（保存・管理） */
+        #bottomRightControls button {
+            background: rgba(255, 255, 255, 0.96) !important;
+            color: #ec4899 !important;
+            border: 2px solid #bae6fd !important;
+            border-radius: 9999px !important;
+            box-shadow:
+                0 6px 16px rgba(147, 197, 253, 0.4),
+                0 3px 8px rgba(244, 114, 182, 0.22),
+                inset 0 -2px 5px rgba(224, 242, 254, 0.7) !important;
+        }
+        #bottomRightControls button#adminToggleBtn {
+            color: #0284c7 !important;
+            border-color: #fbcfe8 !important;
+        }
+
+        /* カード全般（後ろの雲が透ける薄めの半透明パネル） */
+        main > div.bg-white {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(253, 244, 255, 0.28) 100%) !important;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            border: 2px solid rgba(255, 255, 255, 0.88) !important;
+            border-radius: 28px !important;
+            box-shadow:
+                0 10px 24px rgba(147, 197, 253, 0.24),
+                0 4px 12px rgba(249, 168, 212, 0.20),
+                inset 0 -4px 10px rgba(224, 242, 254, 0.55),
+                inset 0 3px 8px rgba(255, 255, 255, 0.8) !important;
+        }
+
+        /* ハイライトバナー（ニュースティッカー風・右から左へ流れる雲型ピル） */
+        @keyframes tickerMarquee {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+            100% {
+                transform: translate3d(-50%, 0, 0);
+            }
+        }
+        #highlightBannerList .ticker-shell {
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            overflow: hidden;
+            position: relative;
+            padding: 1px 0;
+            -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%);
+        }
+        #highlightBannerList .ticker-item span.truncate {
+            text-shadow: 0 1px 6px rgba(255, 255, 255, 0.95), 0 0 10px rgba(255, 255, 255, 0.9);
+        }
+        #highlightBannerList .ticker-track {
+            display: flex;
+            width: max-content;
+            will-change: transform;
+            animation: tickerMarquee var(--ticker-duration, 18s) linear infinite;
+        }
+        #highlightBannerList .ticker-shell:hover .ticker-track,
+        #highlightBannerList .ticker-shell:active .ticker-track {
+            animation-play-state: paused;
+        }
+        #highlightBannerList .ticker-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding-right: 14px;
+        }
+        #highlightBannerList .ticker-item {
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 2px 10px !important;
+            box-shadow: none !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        #highlightBannerList .ticker-item:hover {
+            background: transparent !important;
+            opacity: 0.85;
+            transform: scale(1.02);
+        }
+
+        /* 月移動ボタン & 見出し */
+        #currentMonthLabel {
+            color: #5b5494 !important;
+            text-shadow: 0 1px 0 #ffffff, 0 0 8px rgba(186, 230, 253, 0.8);
+        }
+        main > div.bg-white button[onclick^="changeMonth"] {
+            background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 100%) !important;
+            color: #0284c7 !important;
+            border: 2px solid #ffffff !important;
+            border-radius: 9999px !important;
+            box-shadow: 0 3px 8px rgba(147, 197, 253, 0.35) !important;
+        }
+
+
+        /* カレンダー枠線（縦・横ともに落ち着いた白〜薄霧トーンに統一） */
+        .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+        .border-gray-100,
+        #calendarWeeksContainer,
+        #calendarWeeksContainer > div {
+            border-color: rgba(255, 255, 255, 0.78) !important;
+        }
+        .bg-pink-50\/90 {
+            background: radial-gradient(circle, rgba(252, 231, 243, 0.9) 0%, rgba(224, 242, 254, 0.6) 100%) !important;
+            border-radius: 14px;
+        }
+
+        /* 選択日の開催カード（ふんわりクラウドカード） */
+        #selectedDateEvents > div {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 55%, #fdf2f8 100%) !important;
+            border: 2px solid #ffffff !important;
+            border-radius: 20px !important;
+            box-shadow:
+                0 5px 14px rgba(186, 230, 253, 0.35),
+                inset 0 -3px 8px rgba(252, 231, 243, 0.55) !important;
+        }
+
+        /* モーダル */
+        div[id$="Modal"] > div {
+            background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 60%, #fdf2f8 100%) !important;
+            border: 3px solid #ffffff !important;
+            border-radius: 28px !important;
+            box-shadow: 0 16px 36px rgba(147, 197, 253, 0.4), 0 6px 18px rgba(244, 114, 182, 0.25) !important;
+        }
+
+        #selectedDateEvents > div {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.52) 0%, rgba(240, 249, 255, 0.48) 55%, rgba(253, 242, 248, 0.48) 100%) !important;
+            backdrop-filter: blur(2px);
+        }
+
+    </style>
+</head>
+<body class="bg-pink-50 text-gray-800 min-h-screen flex flex-col items-center">
+
+    <div class="w-full max-w-md bg-pink-50/40 min-h-screen flex flex-col">
+
+        <!-- 上部固定ヘッダー -->
+        <div class="sticky top-0 z-30 bg-white shadow-xs">
+            <header class="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-4 py-3">
+                <div class="flex items-center justify-center">
+                    <h1 class="cloud-title-badge leading-tight">
+                        <span class="title-sub">✦ Pokecolo Twin Schedule ✦</span>
+                        <span class="title-main">ポケツイ イベントカレンダー</span>
+                    </h1>
+                </div>
+            </header>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <main class="flex-1 px-3 pt-1.5 pb-8 space-y-2">
+
+            <!-- 注目・開催中バナー一覧（残り日数 / 最終日 / NEW） -->
+            <div id="highlightBannerList" class="space-y-1.5"></div>
+
+            <!-- カレンダー本体カード -->
+            <div class="bg-white rounded-2xl border border-pink-100 shadow-xs p-3 space-y-2.5">
+                <!-- 月ナビゲーション -->
+                <div class="space-y-1.5">
+                    <div class="grid grid-cols-[1fr_auto_1fr] items-center px-1 gap-1">
+                        <div class="flex items-center justify-start">
+                            <button type="button" onclick="changeMonth(-1)" title="前月" class="w-8 h-7 flex items-center justify-center rounded-lg border border-pink-200 bg-pink-50/60 text-pink-600 text-xs font-bold hover:bg-pink-100">◀</button>
+                        </div>
+                        <button type="button" onclick="toggleMonthPicker()" title="年月を直接選択" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/55 hover:bg-white/80 border border-white/90 shadow-2xs transition-colors">
+                            <span id="currentMonthLabel" class="text-sm font-extrabold text-gray-900">2026年11月</span>
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/80 border border-purple-200/80 text-[#6d5cae] text-[11px] font-bold leading-none shadow-2xs">▼</span>
+                        </button>
+                        <div class="flex items-center justify-end gap-1.5">
+                            <button type="button" onclick="goToday()" title="今日に戻る" class="px-2.5 py-1 rounded-full bg-white/55 hover:bg-white/80 border border-white/90 text-[#5b5494] text-xs font-bold shadow-2xs transition-colors leading-none">今日</button>
+                            <button type="button" onclick="changeMonth(1)" title="翌月" class="w-8 h-7 flex items-center justify-center rounded-lg border border-pink-200 bg-pink-50/60 text-pink-600 text-xs font-bold hover:bg-pink-100">▶</button>
+                        </div>
+                    </div>
+                    <!-- 年月クイックピッカー（月ラベルタップで開閉） -->
+                    <div id="monthQuickPicker" class="hidden bg-white/85 backdrop-blur-xs border border-white rounded-2xl p-2 shadow-xs space-y-1.5">
+                        <div class="flex items-center justify-between gap-1.5">
+                            <select id="pickerYearSelect" onchange="applyPickerYearMonth()" class="flex-1 text-xs font-bold text-[#5b5494] bg-white/90 border border-sky-200 rounded-xl px-2 py-1"></select>
+                            <div id="pickerMonthGrid" class="grid grid-cols-6 gap-1 flex-[2]"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 曜日ヘッダー -->
+                <div class="grid grid-cols-7 divide-x divide-white/75 text-center text-[11px] font-bold py-1 border-b border-gray-100">
+                    <div class="text-rose-500">日</div>
+                    <div class="text-gray-700">月</div>
+                    <div class="text-gray-700">火</div>
+                    <div class="text-gray-700">水</div>
+                    <div class="text-gray-700">木</div>
+                    <div class="text-gray-700">金</div>
+                    <div class="text-sky-600">土</div>
+                </div>
+
+                <!-- 週ごとのカレンダーグリッド（帯バー表示対応） -->
+                <div id="calendarWeeksContainer" class="divide-y divide-gray-100 border-b border-gray-100"></div>
+            </div>
+
+            <!-- 選択日の開催一覧カード -->
+            <div class="bg-white rounded-2xl border border-pink-100 shadow-xs p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <h2 id="selectedDateHeading" class="text-xs font-extrabold text-gray-900 flex items-center gap-1">
+                        <span>📌</span>
+                        <span>11月22日(日)の開催一覧</span>
+                    </h2>
+                    
+                </div>
+                <div id="selectedDateEvents" class="space-y-2"></div>
+            </div>
+
+            <!-- 下部アクション（左下：イベント開催履歴ボタン） -->
+            <div class="flex items-center justify-start pt-1 px-0.5">
+                <button type="button" onclick="openHistoryModal()" class="text-xs px-4 py-2 rounded-full bg-white/85 hover:bg-white text-[#5b5494] border border-white shadow-xs font-bold transition-all">
+                    イベント開催履歴
+                </button>
+            </div>
+
+            <!-- 注意書き（非公式・個人制作） -->
+            <footer class="px-2 pt-2 pb-4 text-[10px] leading-relaxed text-[#6b5e73]/85 space-y-1">
+                <p>※ 本サイトは『ポケコロツイン』の非公式ファンサイトであり、ココネ株式会社様および運営公式とは一切関係ありません。</p>
+                <p>※ 個人が趣味で制作・管理しているスケジュールメモのため、掲載内容や日程には誤り・変更・反映遅れが生じる場合があります。正確な情報は必ずアプリ内のお知らせをご確認ください。</p>
+            </footer>
+
+        </main>
+    </div>
+
+
+
+    <!-- 開催履歴・周期確認モーダル（ガチャ・短期復刻以外） -->
+    <div id="historyModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeHistoryModal()">
+        <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-3 shadow-2xl max-h-[88vh] flex flex-col text-xs">
+            <div class="flex justify-between items-start border-b pb-2 shrink-0">
+                <div>
+                    <h2 class="text-sm font-bold text-gray-900">イベント開催履歴</h2>
+                    <p class="text-[10px] text-gray-500 mt-0.5">ガチャ・短期復刻以外の前回開催日や間隔を確認できます</p>
+                </div>
+                <button type="button" onclick="closeHistoryModal()" class="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+                <input type="text" id="historySearchInput" oninput="renderHistoryModalList()" placeholder="イベント名・種別で絞り込み..." class="flex-1 p-2 border border-purple-200 rounded-xl bg-white/90 focus:outline-none focus:ring-2 focus:ring-purple-300">
+                <button type="button" id="historyClearFilterBtn" onclick="clearHistoryFilter()" class="hidden px-2.5 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200">全表示</button>
+            </div>
+            <div id="historyModalBody" class="flex-1 overflow-y-auto space-y-2.5 pr-0.5"></div>
+            <div class="pt-1 shrink-0">
+                <button type="button" onclick="closeHistoryModal()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-xl font-bold">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://neasnxuvjfxeezrniddh.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_UulPkVCIss_YPb-tkj5T6g_ZVuAPMI7";
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const ADMIN_PASS_STORAGE_KEY = 'poketui_admin_passcode';
+        const SPECIAL_CATEGORY_COLORS_KEY = 'poketui_special_category_colors';
+        const DEFAULT_SPECIAL_CATEGORY_COLORS = {
+            fukubukuro: '#cfa47c',
+            choicebag: '#7aa6b8'
+        };
+
+        const EVENT_CATEGORY_OPTIONS = [
+            { value: 'イベント', label: '✨ イベント', defaultColor: '#8d79a6', placeholder: 'イベント名を選択または入力' },
+            { value: 'ツインズシアター', label: '🎬 ツインズシアター', defaultColor: '#c4839c', placeholder: 'ガチャ・タイトル名を入力' },
+            { value: 'ツインズメモリー', label: '📷 ツインズメモリー', defaultColor: '#9b84b8', placeholder: '対象ガチャ3〜4個（例：ガチャA / ガチャB / ガチャC）' },
+            { value: '短期復刻', label: '🔁 短期復刻', defaultColor: '#d48c70', placeholder: '復刻ガチャ名（複数なら / 区切り）' },
+            { value: '福袋', label: '🎁 福袋', defaultColor: '#cfa47c', placeholder: '福袋タイトルを入力' },
+            { value: 'choicebag', label: '🛍️ choicebag', defaultColor: '#7aa6b8', placeholder: 'choicebagタイトルを入力' }
+        ];
+
+        const EVENT_SUBTYPE_TABS = [
+            { value: '水やりイベント', defaultColor: '#6b9ac4' },
+            { value: 'パーティービンゴ', defaultColor: '#e08dac' },
+            { value: 'ドリフェス', defaultColor: '#9c7eb8' },
+            { value: 'ツインズツアー', defaultColor: '#6aa89e' }
+        ];
+
+        function getSpecialCategoryColors() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(SPECIAL_CATEGORY_COLORS_KEY) || '{}') || {};
+                return { ...DEFAULT_SPECIAL_CATEGORY_COLORS, ...saved };
+            } catch (e) {
+                return { ...DEFAULT_SPECIAL_CATEGORY_COLORS };
+            }
+        }
+
+        function setSpecialCategoryColors(nextObj) {
+            localStorage.setItem(SPECIAL_CATEGORY_COLORS_KEY, JSON.stringify({
+                ...DEFAULT_SPECIAL_CATEGORY_COLORS,
+                ...(nextObj || {})
+            }));
+        }
+        let isAdminUnlocked = false;
+
+        const todayObj = new Date();
+        const todayZero = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate());
+        const todayStr = formatDate(todayZero);
+
+        let viewYear = todayZero.getFullYear();
+        let viewMonth = todayZero.getMonth();
+        let selectedDateStr = todayStr;
+
+        let allSchedules = [];
+        let latestNewStartDate = '';
+
+        const WEEKDAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+
+        function formatDate(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function parseLocalDate(str) {
+            if (!str) return null;
+            const [y, m, d] = str.split('-').map(Number);
+            if (!y || !m || !d) return null;
+            return new Date(y, m - 1, d);
+        }
+
+        function diffDaysFromToday(dateStr) {
+            const target = parseLocalDate(dateStr);
+            if (!target) return null;
+            return Math.round((target.getTime() - todayZero.getTime()) / (1000 * 60 * 60 * 24));
+        }
+
+        function formatShortMD(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${Number(parts[1])}/${Number(parts[2])}`;
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ガチャ（release_type === 'gacha' かつ category === 'ガチャ'）のみをガチャ扱いとし、
+        // 福袋・Choicebag・ドリフェスなどはイベントと同じ扱いにする
+        function isPureGachaItem(ev) {
+            if (!ev) return false;
+            return ev.source === 'gacha' && ev.release_type === 'gacha' && ev.category === 'ガチャ';
+        }
+
+        // 福袋（release_type === 'fukubukuro' または category === '福袋'）かどうか
+        function isFukubukuroItem(ev) {
+            if (!ev) return false;
+            return ev.release_type === 'fukubukuro' || ev.category === '福袋';
+        }
+
+        // Choicebag（release_type === 'choicebag' または category === 'Choicebag' / 'choicebag'）かどうか
+        function isChoicebagItem(ev) {
+            if (!ev) return false;
+            const catLow = String(ev.category || '').toLowerCase();
+            return ev.release_type === 'choicebag' || catLow === 'choicebag';
+        }
+
+        // カレンダー上で開始日・終了日マーカーとして表示する対象（ガチャのみ。福袋は期間中バー表示）
+        function isMarkerScheduleItem(ev) {
+            return isPureGachaItem(ev);
+        }
+
+        function computeLatestNewStartDate(list) {
+            const candidates = list.filter(item => isMarkerScheduleItem(item) && item.start_date && item.start_date >= todayStr);
+            return candidates.reduce((latest, item) => (!latest || item.start_date > latest.start_date || item.start_date === latest.start_date) ? item : latest, null);
+        }
+
+        function hydrateScheduleFlags(list) {
+            latestNewStartDate = computeLatestNewStartDate(list);
+            return list.map(ev => {
+                const start = ev.start_date;
+                const end = ev.end_date || ev.start_date;
+                const gachaOnly = isPureGachaItem(ev);
+                const fukuOnly = isFukubukuroItem(ev);
+                const choiceOnly = isChoicebagItem(ev);
+                const markerItem = isMarkerScheduleItem(ev);
+                // 今日が最終日かどうか（上部バナー用）
+                const isLastDayToday = Boolean(end && end === todayStr && start <= todayStr);
+                const hasEndDay = Boolean(end && markerItem);
+                const isStartDay = Boolean(start && markerItem);
+                const isNew = Boolean(start && ev === latestNewStartDate && markerItem);
+                const isActive = Boolean(start && end && start <= todayStr && end >= todayStr);
+                return {
+                    ...ev,
+                    end_date: end,
+                    _isPureGacha: gachaOnly,
+                    _isFukubukuro: fukuOnly,
+                    _isChoicebag: choiceOnly,
+                    _isMarkerItem: markerItem,
+                    _isLastDay: isLastDayToday,
+                    _hasEndDay: hasEndDay,
+                    _isStartDay: isStartDay,
+                    _isNew: isNew,
+                    _isActive: isActive
+                };
+            });
+        }
+
+        function splitMultiTitles(rawTitle) {
+            return String(rawTitle || '')
+                .split(/[\r\n／/・、,]+/)
+                .map(s => s.trim())
+                .filter(Boolean);
+        }
+
+        function formatCalendarBarLabel(ev) {
+            const cat = (ev.category || '').trim();
+            const title = (ev.title || '').trim();
+            if (ev._isFukubukuro) {
+                return title && title !== '福袋' ? `福袋｜${title}` : '福袋';
+            }
+            if (ev._isChoicebag) {
+                return title && title.toLowerCase() !== 'choicebag' ? `choicebag｜${title}` : 'choicebag';
+            }
+            if (cat === 'ツインズメモリー') {
+                return 'ツインズメモリー';
+            }
+            if (cat === '短期復刻') {
+                const items = splitMultiTitles(title);
+                if (!items.length || title === '短期復刻') return '短期復刻';
+                return items.length > 1 ? `短期復刻｜${items[0]} ほか` : `短期復刻｜${items[0]}`;
+            }
+            if (cat === 'ツインズシアター') {
+                if (!title || title === 'ツインズシアター') return 'ツインズシアター';
+                return `ツインズシアター｜${title}`;
+            }
+            return title || cat;
+        }
+
+        function getCategoryStyle(category, isPureGacha = false) {
+            if (category === 'ガチャ' && isPureGacha) {
+                return {
+                    barBg: 'bg-[#b57c8c] text-white',
+                    pillBg: 'bg-pink-100 text-pink-700 border-pink-200',
+                    icon: '🎪'
+                };
+            }
+            if (category === '福袋') {
+                return {
+                    barBg: 'bg-[#cfa47c] text-white',
+                    pillBg: 'bg-amber-100 text-amber-800 border-amber-300',
+                    icon: '🎁'
+                };
+            }
+            return {
+                barBg: 'bg-[#8d79a6] text-white',
+                pillBg: 'bg-purple-100 text-purple-700 border-purple-200',
+                icon: '✨'
+            };
+        }
+
+        function initApp() {
+            syncMonthPickerUI();
+            bindCalendarSwipe();
+            renderCalendar();
+            renderSelectedDateEvents();
+            loadAllSchedules();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        async function reloadAllData() {
+            await loadAllSchedules();
+            updateSyncStatusBox();
+        }
+
+        async function loadAllSchedules() {
+            const combined = [];
+            try {
+                // 1. public.events から取得
+                let { data: eventRows, error: eventErr } = await supabaseClient
+                    .from('events')
+                    .select('id, title, category, start_date, end_date, created_at, color')
+                    .order('start_date', { ascending: true });
+                if (eventErr && String(eventErr.message || '').toLowerCase().includes('color')) {
+                    const fallback = await supabaseClient.from('events').select('id, title, category, start_date, end_date, created_at').order('start_date', { ascending: true });
+                    eventRows = fallback.data; eventErr = fallback.error;
+                }
+
+                if (!eventErr && eventRows) {
+                    eventRows.forEach(ev => {
+                        const cat = (ev.category || 'イベント').trim();
+                        combined.push({
+                            id: ev.id,
+                            source: 'event',
+                            title: ev.title,
+                            category: cat,
+                            release_type: cat === 'ガチャ' ? 'gacha' : 'event',
+                            start_date: ev.start_date,
+                            end_date: ev.end_date || ev.start_date,
+                            color: ev.color || null
+                        });
+                    });
+                }
+
+                // 2. public.items からガチャ・福袋・Choicebag・ドリフェス等を取得
+                const pageSize = 1000;
+                let from = 0;
+                let allItemRows = [];
+                while (true) {
+                    const { data: chunk, error: itemErr } = await supabaseClient
+                        .from('items')
+                        .select('gacha_group_name, gacha_start_date, gacha_end_date, release_type')
+                        .not('gacha_group_name', 'is', null)
+                        .range(from, from + pageSize - 1);
+
+                    if (itemErr || !chunk) break;
+                    allItemRows = allItemRows.concat(chunk);
+                    if (chunk.length < pageSize) break;
+                    from += chunk.length;
+                }
+
+                const gachaMap = new Map();
+                allItemRows.forEach(row => {
+                    const name = (row.gacha_group_name || '').trim();
+                    if (!name) return;
+                    const start = row.gacha_start_date || '';
+                    const end = row.gacha_end_date || '';
+                    if (!start && !end) return;
+
+                    if (!gachaMap.has(name)) {
+                        gachaMap.set(name, {
+                            start: start || end,
+                            end: end || start,
+                            releaseType: row.release_type || 'gacha'
+                        });
+                    } else {
+                        const prev = gachaMap.get(name);
+                        if (start && (!prev.start || start < prev.start)) prev.start = start;
+                        if (end && (!prev.end || end > prev.end)) prev.end = end;
+                    }
+                });
+
+                const specialCatColors = getSpecialCategoryColors();
+                gachaMap.forEach((info, name) => {
+                    const relType = info.releaseType || 'gacha';
+                    const catLabel = ({ gacha: 'ガチャ', fukubukuro: '福袋', dreamfes: 'ドリフェス', choicebag: 'Choicebag' }[relType] || 'イベント');
+                    combined.push({
+                        id: `gacha_${name}`,
+                        source: 'gacha',
+                        title: name,
+                        category: catLabel,
+                        release_type: relType,
+                        start_date: info.start,
+                        end_date: info.end,
+                        color: specialCatColors[relType] || null
+                    });
+                });
+            } catch (err) {
+                console.warn('読み込みエラー:', err);
+            }
+
+            allSchedules = hydrateScheduleFlags(combined);
+            renderHighlightBanners();
+            renderCalendar();
+            renderSelectedDateEvents();
+        }
+
+        function getFilteredSchedules() {
+            return allSchedules;
+        }
+
+        // 上部の注目バー（ニュースティッカー風に右から左へ流れる表示）
+        function renderHighlightBanners() {
+            const container = document.getElementById('highlightBannerList');
+            if (!container) return;
+
+            const scoped = getFilteredSchedules();
+            const activeItems = scoped.filter(ev => ev._isLastDay || ev._isNew).sort((a, b) => {
+                if (a._isLastDay !== b._isLastDay) return a._isLastDay ? -1 : 1;
+                if (a._isNew !== b._isNew) return a._isNew ? -1 : 1;
+                return (a.end_date || '').localeCompare(b.end_date || '');
+            });
+
+            if (activeItems.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const itemsHtml = activeItems.map(ev => {
+                const st = getCategoryStyle(ev.category, ev._isPureGacha);
+                const remDays = diffDaysFromToday(ev.end_date);
+                let leftBadge = '';
+                if (ev._isLastDay || remDays === 0) {
+                    leftBadge = `<span class="shrink-0 text-[10px] bg-rose-400/90 text-white px-2 py-0.5 rounded-full font-extrabold shadow-2xs">⏰ 最終日</span>`;
+                } else if (ev._isNew) {
+                    leftBadge = `<span class="shrink-0 text-[10px] bg-gradient-to-r from-pink-500 to-amber-500 text-white px-2 py-0.5 rounded-full font-extrabold">✨ NEW</span>`;
+                } else if (remDays !== null && remDays > 0) {
+                    leftBadge = `<span class="shrink-0 text-[10px] bg-rose-500 text-white px-2 py-0.5 rounded-full font-extrabold">残り${remDays}日</span>`;
+                }
+
+                const extraNewBadge = (ev._isLastDay && ev._isNew)
+                    ? `<span class="shrink-0 text-[9px] bg-pink-500 text-white px-1.5 py-0.5 rounded-full font-extrabold">NEW</span>`
+                    : '';
+
+                return `
+                    <button type="button" onclick="jumpToSchedule('${ev.start_date}', '${ev.end_date}')" class="ticker-item text-left">
+                        ${leftBadge}
+                        ${extraNewBadge}
+                        <span class="shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-bold ${st.pillBg}">${escapeHtml(ev.category)}</span>
+                        <span class="text-xs font-extrabold text-gray-900 truncate">${escapeHtml(ev.title)}</span>
+                        <span class="shrink-0 text-[10px] font-bold text-gray-500">〜${formatShortMD(ev.end_date)}</span>
+                    </button>
+                `;
+            }).join('');
+
+            // 件数に応じて自然な速度（1件あたり約10秒、最低14秒）を計算
+            const durationSec = Math.max(14, activeItems.length * 10);
+
+            container.innerHTML = `
+                <div class="ticker-shell" style="--ticker-duration: ${durationSec}s;">
+                    <div class="ticker-track">
+                        <div class="ticker-group">${itemsHtml}</div>
+                        <div class="ticker-group" aria-hidden="true">${itemsHtml}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function jumpToSchedule(startDate, endDate) {
+            const target = (endDate === todayStr) ? endDate : (startDate || todayStr);
+            const d = parseLocalDate(target);
+            if (d) {
+                viewYear = d.getFullYear();
+                viewMonth = d.getMonth();
+                selectedDateStr = target;
+                renderCalendar();
+                renderSelectedDateEvents();
+            }
+        }
+
+        // 週ごとの横帯（ガントバー）付きカレンダー描画
+        // ガチャ（_isPureGacha）は開始日（🚩 / 🚩 NEW）と全ガチャの終了日（⏰）を表示し、
+        // それ以外（イベント・福袋・Choicebag・ドリフェス）は期間中すべて横帯バーで表示する
+        function renderCalendar() {
+            const labelEl = document.getElementById('currentMonthLabel');
+            if (labelEl) labelEl.textContent = `${viewYear}年${viewMonth + 1}月`;
+
+            const container = document.getElementById('calendarWeeksContainer');
+            if (!container) return;
+
+            const firstOfMonth = new Date(viewYear, viewMonth, 1);
+            const startDow = firstOfMonth.getDay();
+            const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+            const cells = [];
+            for (let i = startDow - 1; i >= 0; i--) {
+                const d = new Date(viewYear, viewMonth, -i);
+                cells.push({ dateObj: d, dateStr: formatDate(d), inMonth: false });
+            }
+            for (let day = 1; day <= daysInMonth; day++) {
+                const d = new Date(viewYear, viewMonth, day);
+                cells.push({ dateObj: d, dateStr: formatDate(d), inMonth: true });
+            }
+            while (cells.length % 7 !== 0) {
+                const nextIdx = cells.length - (startDow + daysInMonth) + 1;
+                const d = new Date(viewYear, viewMonth + 1, nextIdx);
+                cells.push({ dateObj: d, dateStr: formatDate(d), inMonth: false });
+            }
+
+            const scopedEvents = getFilteredSchedules();
+            const weeks = [];
+            for (let i = 0; i < cells.length; i += 7) {
+                weeks.push(cells.slice(i, i + 7));
+            }
+
+            container.innerHTML = weeks.map(week => {
+                const weekStartStr = week[0].dateStr;
+                const weekEndStr = week[6].dateStr;
+
+                const renderItems = [];
+                scopedEvents.forEach(ev => {
+                    if (!ev.start_date) return;
+                    const end = ev.end_date || ev.start_date;
+                    if (ev.start_date > weekEndStr || end < weekStartStr) return;
+
+                    if (ev._isMarkerItem) {
+                        if (ev.start_date >= weekStartStr && ev.start_date <= weekEndStr) {
+                            renderItems.push({
+                                ev,
+                                markerType: 'start',
+                                targetDate: ev.start_date,
+                                sortDate: ev.start_date
+                            });
+                        }
+                        if (end && end >= weekStartStr && end <= weekEndStr) {
+                            renderItems.push({
+                                ev,
+                                markerType: 'end',
+                                targetDate: end,
+                                sortDate: end
+                            });
+                        }
+                    } else {
+                        renderItems.push({
+                            ev,
+                            markerType: 'bar',
+                            targetDate: null,
+                            sortDate: ev.start_date
+                        });
+                    }
+                });
+
+                renderItems.sort((a, b) => {
+                    if (a.sortDate !== b.sortDate) return a.sortDate.localeCompare(b.sortDate);
+                    if (a.markerType !== b.markerType) {
+                        const order = { end: 0, start: 1, bar: 2 };
+                        return (order[a.markerType] ?? 9) - (order[b.markerType] ?? 9);
+                    }
+                    return (b.ev.end_date || '').localeCompare(a.ev.end_date || '');
+                });
+
+                const lanes = [];
+                renderItems.forEach(item => {
+                    const { ev, markerType, targetDate } = item;
+                    const isGachaMarker = markerType === 'start' || markerType === 'end';
+                    const markerIdx = isGachaMarker ? week.findIndex(c => c.dateStr === targetDate) : -1;
+                    if (isGachaMarker && markerIdx === -1) return;
+
+                    const sIdx = isGachaMarker ? markerIdx : Math.max(0, week.findIndex(c => c.dateStr >= ev.start_date));
+                    let eIdx = 6;
+                    if (isGachaMarker) {
+                        eIdx = sIdx;
+                    } else {
+                        for (let idx = 6; idx >= 0; idx--) {
+                            if (week[idx].dateStr <= (ev.end_date || ev.start_date)) {
+                                eIdx = idx;
+                                break;
+                            }
+                        }
+                    }
+                    if (sIdx === -1 || eIdx < sIdx) return;
+
+                    let laneIdx = lanes.findIndex(lane => lane.every(seg => eIdx < seg.sIdx || sIdx > seg.eIdx));
+                    if (laneIdx === -1) {
+                        laneIdx = lanes.length;
+                        lanes.push([]);
+                    }
+                    lanes[laneIdx].push({ ev, markerType, targetDate, sIdx, eIdx });
+                });
+
+                const dayHeadersHtml = week.map((cell, colIdx) => {
+                    const isToday = cell.dateStr === todayStr;
+                    const isSelected = cell.dateStr === selectedDateStr;
+                    const numCls = !cell.inMonth
+                        ? 'text-gray-300'
+                        : colIdx === 0
+                            ? 'text-rose-500'
+                            : colIdx === 6
+                                ? 'text-sky-600'
+                                : 'text-gray-800';
+                    const bgCls = isSelected ? 'bg-pink-50/90' : '';
+
+                    return `
+                        <button type="button" onclick="selectDate('${cell.dateStr}')" class="py-1.5 flex flex-col items-center justify-center relative transition-colors ${bgCls}">
+                            <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-extrabold ${isToday ? 'bg-[#d98a9e] text-white shadow-2xs ring-2 ring-white/85' : isSelected ? 'ring-1 ring-[#d98a9e]/80 ' + numCls : numCls}">
+                                ${cell.dateObj.getDate()}
+                            </span>
+                        </button>
+                    `;
+                }).join('');
+
+                const lanesHtml = lanes.map(lane => {
+                    let rowCols = '';
+                    let cursor = 0;
+                    lane.sort((a, b) => a.sIdx - b.sIdx).forEach(seg => {
+                        if (seg.sIdx > cursor) {
+                            rowCols += `<div style="grid-column: span ${seg.sIdx - cursor};"></div>`;
+                        }
+                        const span = seg.eIdx - seg.sIdx + 1;
+                        const st = getCategoryStyle(seg.ev.category, seg.ev._isPureGacha);
+                        const isGachaMarker = seg.markerType === 'start' || seg.markerType === 'end';
+                        const isStartInWeek = (isGachaMarker ? seg.targetDate : seg.ev.start_date) >= weekStartStr;
+                        const isEndInWeek = (isGachaMarker ? seg.targetDate : (seg.ev.end_date || seg.ev.start_date)) <= weekEndStr;
+                        const roundCls = `${isStartInWeek ? 'rounded-l-full pl-2' : 'pl-1'} ${isEndInWeek ? 'rounded-r-full pr-2' : 'pr-1'}`;
+
+                        const barTitleText = formatCalendarBarLabel(seg.ev);
+
+                        const markerLabel = seg.markerType === 'end'
+                            ? '⏰'
+                            : seg.markerType === 'start'
+                                ? (seg.ev._isNew ? '🚩 NEW' : '🚩')
+                                : escapeHtml(barTitleText);
+
+                        const markerStyle = seg.markerType === 'end'
+                            ? 'bg-[#b87b88]/85 text-white border border-[#a36875]/80'
+                            : seg.markerType === 'start'
+                                ? (seg.ev._isNew ? 'bg-[#fae7b5]/95 text-[#7a5228] border border-[#e3c47d]/90' : 'bg-[#fdf3d7]/95 text-[#7c5e3c] border border-[#ebd7a8]/90')
+                                : st.barBg;
+
+                        const customColorStyle = (!isGachaMarker && seg.ev.color)
+                            ? `background-color:${seg.ev.color};color:#fff;`
+                            : '';
+
+                        rowCols += `
+                            <button type="button" onclick="selectDate('${week[seg.sIdx].dateStr}')" style="grid-column: span ${span};${customColorStyle}" class="${markerStyle} ${roundCls} h-4.5 text-[10px] font-bold leading-none flex items-center ${isGachaMarker ? 'justify-center text-center' : 'text-left'} truncate shadow-2xs hover:opacity-90">
+                                <span class="truncate">${markerLabel}</span>
+                            </button>
+                        `;
+                        cursor = seg.eIdx + 1;
+                    });
+                    if (cursor < 7) {
+                        rowCols += `<div style="grid-column: span ${7 - cursor};"></div>`;
+                    }
+                    return `<div class="grid grid-cols-7 gap-x-0.5 px-0.5">${rowCols}</div>`;
+                }).join('');
+
+                return `
+                    <div class="pb-1.5 relative">
+                        <div aria-hidden="true" class="pointer-events-none absolute inset-0 grid grid-cols-7 divide-x divide-white/75">
+                            <div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                        </div>
+                        <div class="relative z-10 grid grid-cols-7">${dayHeadersHtml}</div>
+                        ${lanesHtml ? `<div class="relative z-10 space-y-1 mt-0.5">${lanesHtml}</div>` : '<div class="relative z-10 h-2"></div>'}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectDate(dateStr) {
+            selectedDateStr = dateStr;
+            renderCalendar();
+            renderSelectedDateEvents();
+        }
+
+        function changeMonth(delta) {
+            const totalMonths = viewYear * 12 + viewMonth + delta;
+            viewYear = Math.floor(totalMonths / 12);
+            viewMonth = ((totalMonths % 12) + 12) % 12;
+            syncMonthPickerUI();
+            renderCalendar();
+        }
+
+        function toggleMonthPicker() {
+            const picker = document.getElementById('monthQuickPicker');
+            if (!picker) return;
+            const willOpen = picker.classList.contains('hidden');
+            if (willOpen) {
+                syncMonthPickerUI();
+                picker.classList.remove('hidden');
+            } else {
+                picker.classList.add('hidden');
+            }
+        }
+
+        function syncMonthPickerUI() {
+            const yearSel = document.getElementById('pickerYearSelect');
+            const monthGrid = document.getElementById('pickerMonthGrid');
+            if (!yearSel || !monthGrid) return;
+
+            const baseYear = todayZero.getFullYear();
+            const minYear = Math.min(baseYear - 4, viewYear - 1);
+            const maxYear = Math.max(baseYear + 2, viewYear + 1);
+
+            let yearOptions = '';
+            for (let y = maxYear; y >= minYear; y--) {
+                yearOptions += `<option value="${y}" ${y === viewYear ? 'selected' : ''}>${y}年</option>`;
+            }
+            yearSel.innerHTML = yearOptions;
+
+            monthGrid.innerHTML = Array.from({ length: 12 }, (_, m) => {
+                const active = m === viewMonth;
+                const cls = active
+                    ? 'bg-pink-500 text-white font-bold shadow-2xs'
+                    : 'bg-white/80 text-[#5b5494] hover:bg-sky-50 border border-sky-100 font-semibold';
+                return `<button type="button" onclick="selectPickerMonth(${m})" class="py-1 rounded-lg text-[10px] transition-colors ${cls}">${m + 1}月</button>`;
+            }).join('');
+        }
+
+        function applyPickerYearMonth() {
+            const yearSel = document.getElementById('pickerYearSelect');
+            if (!yearSel) return;
+            viewYear = Number(yearSel.value) || viewYear;
+            syncMonthPickerUI();
+            renderCalendar();
+        }
+
+        function selectPickerMonth(m) {
+            viewMonth = m;
+            syncMonthPickerUI();
+            renderCalendar();
+            const picker = document.getElementById('monthQuickPicker');
+            if (picker) picker.classList.add('hidden');
+        }
+
+        function bindCalendarSwipe() {
+            const calEl = document.getElementById('calendarWeeksContainer');
+            if (!calEl || calEl.dataset.swipeBound) return;
+            calEl.dataset.swipeBound = '1';
+
+            let startX = 0;
+            let startY = 0;
+            let tracking = false;
+
+            calEl.addEventListener('touchstart', (e) => {
+                if (!e.touches || e.touches.length !== 1) return;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                tracking = true;
+            }, { passive: true });
+
+            calEl.addEventListener('touchend', (e) => {
+                if (!tracking || !e.changedTouches || e.changedTouches.length !== 1) return;
+                tracking = false;
+                const endX = e.changedTouches[0].clientX;
+                const endY = e.changedTouches[0].clientY;
+                const dx = endX - startX;
+                const dy = endY - startY;
+                if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+                    if (dx > 0) {
+                        changeMonth(-1); // 右スワイプで前月へ遡る
+                    } else {
+                        changeMonth(1);  // 左スワイプで翌月へ進む
+                    }
+                }
+            }, { passive: true });
+        }
+
+        function goToday() {
+            viewYear = todayZero.getFullYear();
+            viewMonth = todayZero.getMonth();
+            selectedDateStr = todayStr;
+            syncMonthPickerUI();
+            renderCalendar();
+            renderSelectedDateEvents();
+        }
+
+        function renderSelectedDateEvents() {
+            const headingEl = document.getElementById('selectedDateHeading');
+            const container = document.getElementById('selectedDateEvents');
+            if (!headingEl || !container) return;
+
+            const d = parseLocalDate(selectedDateStr) || todayZero;
+            const label = `${d.getMonth() + 1}月${d.getDate()}日(${WEEKDAYS_JA[d.getDay()]})の開催一覧`;
+            headingEl.innerHTML = `<span>📌</span><span>${label}</span>`;
+
+            const scoped = getFilteredSchedules();
+            const list = scoped.filter(ev => {
+                if (!ev.start_date) return false;
+                const end = ev.end_date || ev.start_date;
+                if (ev._isMarkerItem && selectedDateStr !== ev.start_date && selectedDateStr !== end) return false;
+                return selectedDateStr >= ev.start_date && selectedDateStr <= end;
+            }).sort((a, b) => {
+                const aLast = (a.end_date || a.start_date) === selectedDateStr;
+                const bLast = (b.end_date || b.start_date) === selectedDateStr;
+                if (aLast !== bLast) return aLast ? -1 : 1;
+                if (a._isNew !== b._isNew) return a._isNew ? -1 : 1;
+                return (a.end_date || '').localeCompare(b.end_date || '');
+            });
+
+            if (list.length === 0) {
+                container.innerHTML = `<div class="text-center py-5 text-xs text-gray-400 bg-gray-50/70 rounded-xl border border-dashed border-gray-200">この日の開催予定はありません</div>`;
+                return;
+            }
+
+            container.innerHTML = list.map(ev => {
+                const st = getCategoryStyle(ev.category, ev._isPureGacha);
+                const period = ev.start_date === ev.end_date ? ev.start_date : `${ev.start_date} 〜 ${ev.end_date}`;
+                const isLastOnSelected = ev.end_date === selectedDateStr;
+                const isStartOnSelected = ev.start_date === selectedDateStr;
+
+                let statusBadges = '';
+                if (isLastOnSelected) {
+                    statusBadges += `<span class="text-[10px] bg-rose-400/90 text-white px-2 py-0.5 rounded-full font-extrabold shadow-2xs">⏰ 最終日</span>`;
+                }
+                if (isStartOnSelected && ev._isMarkerItem) {
+                    statusBadges += `<span class="text-[10px] bg-[#fdf3d7] text-[#7c5e3c] border border-[#ebd7a8] px-2 py-0.5 rounded-full font-extrabold">🚩 初日</span>`;
+                }
+                if (isStartOnSelected && ev._isNew) {
+                    statusBadges += `<span class="text-[10px] bg-gradient-to-r from-pink-500 to-amber-500 text-white px-2 py-0.5 rounded-full font-extrabold">NEW</span>`;
+                }
+
+                const multiList = (ev.category === 'ツインズメモリー' || ev.category === '短期復刻')
+                    ? splitMultiTitles(ev.title)
+                    : [];
+                const titleBlockHtml = multiList.length > 1
+                    ? `<div class="space-y-1 pt-0.5">
+                        ${multiList.map(t => `<div class="text-xs font-bold text-gray-900 flex items-center gap-1.5"><span class="text-pink-400">・</span><span>${escapeHtml(t)}</span></div>`).join('')}
+                       </div>`
+                    : `<div class="text-sm font-extrabold text-gray-900 break-words">${escapeHtml(ev.title || ev.category)}</div>`;
+
+                const prevInfo = getPreviousOccurrenceInfo(ev);
+                const prevBadgeHtml = prevInfo
+                    ? `<button type="button" onclick="openHistoryModal('${escapeHtml(prevInfo.groupKey)}')" class="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-purple-50/90 hover:bg-purple-100 text-purple-800 border border-purple-200/80 font-bold transition-colors">
+                        <span>🕒 前回：${escapeHtml(prevInfo.periodLabel)}（${escapeHtml(prevInfo.agoLabel)}）</span>
+                        <span class="text-purple-400">▸</span>
+                       </button>`
+                    : (!ev._isPureGacha && ev.category !== '短期復刻')
+                        ? `<button type="button" onclick="openHistoryModal('${escapeHtml(getHistoryGroupKey(ev))}')" class="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gray-100/80 hover:bg-purple-50 text-gray-500 hover:text-purple-700 border border-gray-200/80 font-medium transition-colors">
+                            <span>🕒 前回記録なし（履歴を見る）</span>
+                           </button>`
+                        : '';
+
+                return `
+                    <div style="${!ev._isPureGacha && ev.color ? `border-left:5px solid ${ev.color};` : ''}" class="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3 flex items-center justify-between gap-2">
+                        <div class="space-y-1 min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-[10px] px-2 py-0.5 rounded-md border font-bold ${st.pillBg}">${escapeHtml(ev.category)}</span>
+                                ${statusBadges}
+                                <span class="text-[11px] text-gray-500 font-medium">${period}</span>
+                            </div>
+                            ${titleBlockHtml}
+                            ${prevBadgeHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 開催履歴・周期集計（ガチャ・短期復刻以外）
+        function isHistoryTargetSchedule(ev) {
+            if (!ev || !ev.start_date) return false;
+            if (ev._isPureGacha) return false;
+            const cat = (ev.category || '').trim();
+            if (cat === 'ガチャ' || cat === '短期復刻') return false;
+            return true;
+        }
+
+        function getHistoryGroupKey(ev) {
+            const cat = (ev.category || 'イベント').trim();
+            const catLow = cat.toLowerCase();
+            if (cat === 'イベント') {
+                return `イベント::${(ev.title || '').trim()}`;
+            }
+            if (catLow === 'choicebag' || ev._isChoicebag) {
+                return 'choicebag';
+            }
+            if (cat === '福袋' || ev._isFukubukuro) {
+                return '福袋';
+            }
+            return cat;
+        }
+
+        function getHistoryGroupDisplay(groupKey) {
+            if (groupKey.startsWith('イベント::')) {
+                const name = groupKey.slice('イベント::'.length);
+                return { category: 'イベント', label: name || 'イベント' };
+            }
+            return { category: groupKey, label: groupKey };
+        }
+
+        function formatRelativeSpanLabel(daysDiff) {
+            if (daysDiff <= 0) return '同日';
+            if (daysDiff < 30) return `${daysDiff}日前`;
+            const months = Math.round(daysDiff / 30);
+            if (months < 12) return `約${months}ヶ月前`;
+            const years = (daysDiff / 365).toFixed(1).replace(/\.0$/, '');
+            return `約${years}年前`;
+        }
+
+        function getPreviousOccurrenceInfo(ev) {
+            if (!isHistoryTargetSchedule(ev)) return null;
+            const groupKey = getHistoryGroupKey(ev);
+            const sameGroup = allSchedules
+                .filter(item => isHistoryTargetSchedule(item) && getHistoryGroupKey(item) === groupKey)
+                .filter(item => item.start_date < ev.start_date)
+                .sort((a, b) => b.start_date.localeCompare(a.start_date));
+
+            if (!sameGroup.length) return null;
+            const prev = sameGroup[0];
+            const dCur = parseLocalDate(ev.start_date);
+            const dPrev = parseLocalDate(prev.start_date);
+            const diffDays = (dCur && dPrev) ? Math.round((dCur.getTime() - dPrev.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+            const periodLabel = prev.start_date === prev.end_date
+                ? formatShortMD(prev.start_date)
+                : `${prev.start_date.replace(/-/g, '/')}〜${formatShortMD(prev.end_date)}`;
+            return {
+                groupKey,
+                prevItem: prev,
+                periodLabel,
+                agoLabel: formatRelativeSpanLabel(diffDays)
+            };
+        }
+
+        let activeHistoryFilterKey = '';
+
+        function openHistoryModal(filterKey = '') {
+            activeHistoryFilterKey = filterKey || '';
+            const searchInp = document.getElementById('historySearchInput');
+            if (searchInp) searchInp.value = '';
+            renderHistoryModalList();
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function clearHistoryFilter() {
+            activeHistoryFilterKey = '';
+            const searchInp = document.getElementById('historySearchInput');
+            if (searchInp) searchInp.value = '';
+            renderHistoryModalList();
+        }
+
+        function renderHistoryModalList() {
+            const body = document.getElementById('historyModalBody');
+            const clearBtn = document.getElementById('historyClearFilterBtn');
+            const q = (document.getElementById('historySearchInput')?.value || '').trim().toLowerCase();
+            if (!body) return;
+
+            if (clearBtn) {
+                clearBtn.classList.toggle('hidden', !activeHistoryFilterKey && !q);
+            }
+
+            const targets = allSchedules.filter(isHistoryTargetSchedule);
+            const groupsMap = new Map();
+
+            targets.forEach(ev => {
+                const key = getHistoryGroupKey(ev);
+                if (!groupsMap.has(key)) {
+                    groupsMap.set(key, []);
+                }
+                groupsMap.get(key).push(ev);
+            });
+
+            let groups = Array.from(groupsMap.entries()).map(([key, items]) => {
+                items.sort((a, b) => b.start_date.localeCompare(a.start_date));
+                const disp = getHistoryGroupDisplay(key);
+                const latest = items[0];
+                const prev = items[1] || null;
+                let avgDays = null;
+                if (items.length >= 2) {
+                    let sum = 0;
+                    let cnt = 0;
+                    for (let i = 0; i < items.length - 1; i++) {
+                        const d1 = parseLocalDate(items[i].start_date);
+                        const d2 = parseLocalDate(items[i + 1].start_date);
+                        if (d1 && d2) {
+                            sum += Math.round((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+                            cnt++;
+                        }
+                    }
+                    if (cnt > 0) avgDays = Math.round(sum / cnt);
+                }
+                return { key, ...disp, items, latest, prev, avgDays };
+            });
+
+            groups.sort((a, b) => b.latest.start_date.localeCompare(a.latest.start_date));
+
+            if (activeHistoryFilterKey) {
+                groups = groups.filter(g => g.key === activeHistoryFilterKey);
+            }
+            if (q) {
+                groups = groups.filter(g =>
+                    g.label.toLowerCase().includes(q) ||
+                    g.category.toLowerCase().includes(q) ||
+                    g.items.some(it => (it.title || '').toLowerCase().includes(q))
+                );
+            }
+
+            if (!groups.length) {
+                body.innerHTML = `<div class="text-center py-8 text-gray-400 bg-gray-50/70 rounded-2xl border border-dashed border-gray-200">該当する開催履歴がありません</div>`;
+                return;
+            }
+
+            body.innerHTML = groups.map(g => {
+                const st = getCategoryStyle(g.category, false);
+                const latestColor = g.latest.color || (g.category === '福袋' ? getSpecialCategoryColors().fukubukuro : g.category.toLowerCase() === 'choicebag' ? getSpecialCategoryColors().choicebag : '#8d79a6');
+                const avgBadge = g.avgDays !== null
+                    ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold">平均間隔：約${g.avgDays}日</span>`
+                    : `<span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">初回・1回のみ</span>`;
+
+                const rowsHtml = g.items.map((it, idx) => {
+                    const period = it.start_date === it.end_date
+                        ? it.start_date.replace(/-/g, '/')
+                        : `${it.start_date.replace(/-/g, '/')} 〜 ${formatShortMD(it.end_date)}`;
+                    const tag = idx === 0
+                        ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-pink-500 text-white font-bold">最新</span>`
+                        : idx === 1
+                            ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">前回</span>`
+                            : `<span class="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">${g.items.length - idx}回目</span>`;
+                    const subTitle = (g.category !== 'イベント' && it.title && it.title !== g.category)
+                        ? `<div class="text-[10px] text-gray-600 truncate pl-1">${escapeHtml(it.title)}</div>`
+                        : '';
+                    let gapStr = '';
+                    if (idx < g.items.length - 1) {
+                        const dCur = parseLocalDate(it.start_date);
+                        const dOlder = parseLocalDate(g.items[idx + 1].start_date);
+                        if (dCur && dOlder) {
+                            const gap = Math.round((dCur.getTime() - dOlder.getTime()) / (1000 * 60 * 60 * 24));
+                            gapStr = `<span class="text-[9px] text-gray-400">(${gap}日ぶり)</span>`;
+                        }
+                    }
+                    return `
+                        <button type="button" onclick="closeHistoryModal(); jumpToSchedule('${it.start_date}', '${it.end_date}')" class="w-full text-left py-1.5 px-2 rounded-lg hover:bg-purple-50/80 transition-colors flex flex-col gap-0.5">
+                            <div class="flex items-center justify-between gap-1.5">
+                                <div class="flex items-center gap-1.5">
+                                    ${tag}
+                                    <span class="text-[11px] font-bold text-gray-800">${period}</span>
+                                    ${gapStr}
+                                </div>
+                                <span class="text-[10px] text-purple-500 font-bold">移動 →</span>
+                            </div>
+                            ${subTitle}
+                        </button>
+                    `;
+                }).join('');
+
+                return `
+                    <div style="border-left: 5px solid ${escapeHtml(latestColor)};" class="bg-white/90 border border-purple-100 rounded-2xl p-3 space-y-2 shadow-2xs">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] px-2 py-0.5 rounded-md border font-bold ${st.pillBg}">${escapeHtml(g.category)}</span>
+                                <span class="text-xs font-extrabold text-gray-900">${escapeHtml(g.label)}</span>
+                            </div>
+                            ${avgBadge}
+                        </div>
+                        <div class="divide-y divide-gray-100 border-t border-gray-100 pt-1">
+                            ${rowsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+    </script>
+</body>
+</html>
