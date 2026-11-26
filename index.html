@@ -253,7 +253,7 @@
         <!-- 上部固定ヘッダー -->
         <div class="sticky top-0 z-30 bg-white shadow-xs">
             <header class="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-4 py-3">
-                <div class="flex items-center justify-center">
+                <div class="relative flex items-center justify-center">
                     <h1 class="cloud-title-badge leading-tight">
                         <span class="title-sub">✦ Pokecolo Twin Schedule ✦</span>
                         <span class="title-main">ポケツイ イベントカレンダー</span>
@@ -316,13 +316,12 @@
                         <span>📌</span>
                         <span>11月22日(日)の開催一覧</span>
                     </h2>
-                    <button type="button" id="addOnDateBtn" onclick="openAddModalForSelectedDate()" class="hidden text-[10px] bg-pink-50 text-pink-600 border border-pink-200 px-2 py-0.5 rounded-full font-bold hover:bg-pink-100">＋ この日に追加</button>
                 </div>
                 <div id="selectedDateEvents" class="space-y-2"></div>
             </div>
 
-            <!-- 下部アクション（左下：イベント開催履歴ボタン） -->
-            <div class="flex items-center justify-start pt-1 px-0.5">
+            <!-- 下部アクション（イベント開催履歴） -->
+            <div class="flex items-center justify-start gap-2 pt-1 px-0.5">
                 <button type="button" onclick="openHistoryModal()" class="text-xs px-4 py-2 rounded-full bg-white/85 hover:bg-white text-[#5b5494] border border-white shadow-xs font-bold transition-all">
                     イベント開催履歴
                 </button>
@@ -336,13 +335,14 @@
 
         </main>
     </div>
-<!-- 開催履歴・周期確認モーダル（ガチャ・短期復刻以外） -->
+
+<!-- 開催履歴モーダル（ガチャ・短期復刻以外） -->
     <div id="historyModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeHistoryModal()">
         <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-3 shadow-2xl max-h-[88vh] flex flex-col text-xs">
             <div class="flex justify-between items-start border-b pb-2 shrink-0">
                 <div>
                     <h2 class="text-sm font-bold text-gray-900">イベント開催履歴</h2>
-                    <p class="text-[10px] text-gray-500 mt-0.5">ガチャ・短期復刻以外の前回開催日や間隔を確認できます</p>
+                    <p class="text-[10px] text-gray-500 mt-0.5">経過日数が長い順（長く開催されていない順）に並んでいます</p>
                 </div>
                 <button type="button" onclick="closeHistoryModal()" class="text-gray-400 hover:text-gray-600 text-lg">✕</button>
             </div>
@@ -357,213 +357,17 @@
         </div>
     </div>
 
-    <!-- ガチャ開催タイプ（release_type）確認・補正モーダル -->
-    <div id="gachaTypeFixModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeGachaTypeFixModal()">
-        <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-3 shadow-2xl max-h-[88vh] flex flex-col text-xs">
-            <div class="flex justify-between items-start border-b pb-2 shrink-0">
-                <div>
-                    <h2 class="text-sm font-bold text-gray-900">🔧 ガチャ開催タイプ（gacha表記）補正</h2>
-                    <p class="text-[10px] text-gray-500 mt-0.5">itemsテーブルの開催タイプ（Hapigacha等）を確認してgachaへ統一します</p>
-                </div>
-                <button type="button" onclick="closeGachaTypeFixModal()" class="text-gray-400 hover:text-gray-600 text-lg">✕</button>
-            </div>
-            <div class="flex items-center justify-between gap-2 bg-rose-50 border border-rose-200 rounded-xl p-2.5 shrink-0">
-                <span id="gachaTypeFixSummary" class="font-bold text-rose-900 text-[11px]">読み込み中...</span>
-                <button type="button" id="gachaTypeFixAllBtn" onclick="fixAllGachaReleaseTypesInCal()" class="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 disabled:bg-gray-300 text-white font-bold text-[11px] shrink-0">すべてgachaへ一括修正</button>
-            </div>
-            <div id="gachaTypeFixList" class="flex-1 overflow-y-auto space-y-1.5 pr-0.5"></div>
-            <div class="pt-1 shrink-0">
-                <button type="button" onclick="closeGachaTypeFixModal()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-xl font-bold">閉じる</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- 保存・バックアップ／同期モーダル -->
-    <div id="saveModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeSaveModal()">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-3.5 shadow-2xl text-xs">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h2 class="text-sm font-bold text-gray-900">🍮 データ同期・保存状況</h2>
-                <button type="button" onclick="closeSaveModal()" class="text-gray-400 hover:text-gray-600 text-lg">✕</button>
-            </div>
-            <div class="space-y-2 text-gray-700 leading-relaxed">
-                <p>Supabaseデータベースと自動連携しています。最新データの再読み込みや、現在のカレンダー内容のテキストコピーができます。</p>
-                <div id="syncStatusBox" class="p-2.5 rounded-lg bg-pink-50 border border-pink-200 text-[11px] font-bold text-pink-900"></div>
-            </div>
-            <div class="flex flex-col gap-2 pt-1">
-                <button type="button" onclick="reloadAllData()" class="w-full bg-pink-500 hover:bg-pink-600 text-white py-2.5 rounded-lg font-bold shadow-xs">🔄 最新データに更新する</button>
-                <button type="button" onclick="openGachaTypeFixModal()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 py-2 rounded-lg font-bold">🔧 ガチャ開催タイプ（Hapigacha→gacha）補正</button>
-                <button type="button" onclick="copyScheduleSummary()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 py-2 rounded-lg font-bold">📋 開催中・最終日リストをコピー</button>
-                <button type="button" onclick="closeSaveModal()" class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-medium">閉じる</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- 管理者認証モーダル -->
-    <div id="adminGateModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeAdminGateModal()">
-        <div class="bg-white w-full max-w-xs rounded-2xl p-5 space-y-3.5 shadow-2xl text-xs">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="text-sm font-bold text-gray-900">🔒 管理者メニュー</h3>
-                <button type="button" onclick="closeAdminGateModal()" class="text-gray-400 hover:text-gray-600 text-lg">✕</button>
-            </div>
-            <p class="text-[11px] text-gray-600 leading-relaxed">イベントの追加や編集を行います。パスコードを入力してください。</p>
-            <div>
-                <input type="password" id="adminPasscodeInput" onkeydown="if(event.key==='Enter') verifyAdminPasscode()" placeholder="パスコード" class="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300">
-                <p id="adminPasscodeError" class="hidden text-[11px] text-rose-600 font-bold mt-1">パスコードが違います</p>
-            </div>
-            <div class="flex gap-2 pt-1">
-                <button type="button" onclick="closeAdminGateModal()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium">キャンセル</button>
-                <button type="button" onclick="verifyAdminPasscode()" class="flex-1 bg-pink-500 hover:bg-pink-600 text-white py-2 rounded-lg font-bold shadow-xs">開く</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- 管理者メニューモーダル -->
-    <div id="adminConsoleModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeAdminConsoleModal()">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-3.5 shadow-2xl text-xs">
-            <div class="flex justify-between items-start border-b pb-2">
-                <div>
-                    <h2 class="text-sm font-bold text-gray-900">🛠️ イベント管理</h2>
-                    <p class="text-[10px] text-gray-500 mt-0.5">ガチャはランク表データから自動反映されます</p>
-                </div>
-                <button type="button" onclick="closeAdminConsoleModal()" class="text-gray-400 hover:text-gray-600 text-lg">✕</button>
-            </div>
-            <div class="space-y-2">
-                <button type="button" onclick="closeAdminConsoleModal(); openBulkEventImportModal();" class="w-full flex items-center justify-between p-3 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100 text-left">
-                    <div><div class="font-bold text-gray-900">📋 イベント一括貼り付け登録</div><div class="text-[10px] text-gray-600 mt-0.5">複数イベントをテキストからまとめて追加</div></div><span class="text-purple-600 font-bold">開く →</span>
-                </button>
-                <button type="button" onclick="closeAdminConsoleModal(); openBulkEventEditModal();" class="w-full flex items-center justify-between p-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-left">
-                    <div><div class="font-bold text-gray-900">✏️ イベント一括編集</div><div class="text-[10px] text-gray-600 mt-0.5">イベント名・日付・色を一覧で編集／複数の色をまとめて変更</div></div><span class="text-amber-700 font-bold">開く →</span>
-                </button>
-                <button type="button" onclick="closeAdminConsoleModal(); openEventEditorModal();" class="w-full flex items-center justify-between p-3 rounded-xl border border-pink-300 bg-pink-50 hover:bg-pink-100 text-left">
-                    <div>
-                        <div class="font-bold text-gray-900">＋ イベントを新規登録</div>
-                        <div class="text-[10px] text-gray-600 mt-0.5">イベント・限定スケジュールを追加</div>
-                    </div>
-                    <span class="text-pink-600 font-bold">開く →</span>
-                </button>
-                <button type="button" onclick="closeAdminConsoleModal(); openGachaTypeFixModal();" class="w-full flex items-center justify-between p-3 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-left">
-                    <div>
-                        <div class="font-bold text-gray-900">🔧 ガチャ開催タイプ（Hapigacha→gacha）補正</div>
-                        <div class="text-[10px] text-gray-600 mt-0.5">itemsテーブルの開催タイプ表記ゆれを確認・一括修正</div>
-                    </div>
-                    <span class="text-rose-600 font-bold">開く →</span>
-                </button>
-            </div>
-            <div class="flex items-center justify-between pt-2 border-t text-[11px]">
-                <button type="button" onclick="changeAdminPasscode()" class="text-gray-500 hover:text-gray-800 underline">パスコード変更</button>
-                <button type="button" onclick="lockAdminSession()" class="text-rose-600 hover:text-rose-800 font-bold">ロックする</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- イベント登録・編集モーダル -->
-    <div id="eventEditorModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeEventEditorModal()">
-        <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-3.5 shadow-2xl text-xs">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h2 id="eventEditorTitle" class="text-sm font-bold text-gray-900">📅 イベントを登録</h2>
-                <button type="button" onclick="closeEventEditorModal()" class="text-gray-400 hover:text-gray-600 text-lg">✕</button>
-            </div>
 
-            <input type="hidden" id="editEventId" value="">
 
-            <div class="space-y-3">
-                <div>
-                    <label class="block font-bold text-gray-700 mb-1">1. 種別（カテゴリ）</label>
-                    <div id="singleEventCategoryTabs" class="flex flex-wrap gap-1.5"></div>
-                    <input type="hidden" id="eventCategoryInput" value="イベント">
-                </div>
 
-                <div>
-                    <label id="eventTitleLabel" class="block font-bold text-gray-700 mb-1">2. タイトル <span class="text-rose-500">*</span></label>
-                    <div id="singleEventSubtypeTabs" class="flex flex-wrap gap-1.5 mb-1.5"></div>
-                    <input type="text" id="eventTitleInput" placeholder="イベント名を選択または入力" class="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300">
-                </div>
 
-                <div>
-                    <label class="block font-bold text-gray-700 mb-1">カラー</label>
-                    <div class="flex items-center gap-2">
-                        <input type="color" id="eventColorInput" value="#8d79a6" class="w-12 h-9 p-0.5 border border-gray-300 rounded-lg bg-white">
-                        <span class="text-[11px] text-gray-500">種別やイベントに応じて自動提案されます</span>
-                    </div>
-                </div>
 
-                <div class="grid grid-cols-2 gap-2.5">
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">開始日 <span class="text-rose-500">*</span></label>
-                        <input type="date" id="eventStartInput" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">終了日（任意）</label>
-                        <input type="date" id="eventEndInput" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
-                    </div>
-                </div>
-            </div>
 
-            <div class="flex gap-2 pt-2">
-                <button type="button" id="deleteEventBtn" onclick="deleteCurrentEvent()" class="hidden bg-rose-100 text-rose-700 px-3 py-2.5 rounded-lg font-bold">削除</button>
-                <button type="button" onclick="closeEventEditorModal()" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-medium">キャンセル</button>
-                <button type="button" onclick="saveEvent()" class="flex-1 bg-pink-500 hover:bg-pink-600 text-white py-2.5 rounded-lg font-bold shadow-md">保存する</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- イベント一括編集モーダル -->
-    <div id="bulkEventEditModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-3 z-50" onclick="if(event.target===this) closeBulkEventEditModal()">
-        <div class="bg-white w-full max-w-5xl rounded-2xl p-4 space-y-3 shadow-2xl max-h-[94vh] flex flex-col text-xs">
-            <div class="flex justify-between items-start border-b pb-2 shrink-0">
-                <div><h2 class="text-sm font-bold text-gray-900">✏️ イベント一括編集</h2><p class="text-[10px] text-gray-500 mt-0.5">対象月や検索ワードで絞り込んで表示します。定番イベント・種別の固定カラー設定もここから変更できます。</p></div>
-                <button type="button" onclick="closeBulkEventEditModal()" class="text-gray-400 text-lg">✕</button>
-            </div>
-            <div class="space-y-2 bg-amber-50 border border-amber-200 rounded-xl p-2.5 shrink-0">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <select id="bulkEventEditMonthFilter" onchange="renderBulkEventEditTable()" class="w-full p-2 border border-amber-200 bg-white rounded-lg font-bold text-gray-800"></select>
-                    <input id="bulkEventEditSearch" type="text" oninput="renderBulkEventEditTable()" placeholder="イベント名・種別で絞り込み..." class="w-full p-2 border border-amber-200 bg-white rounded-lg">
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" onclick="toggleBulkEventEditAll(true)" class="px-2 py-1.5 border bg-white rounded font-bold">表示中を全選択</button>
-                    <button type="button" onclick="toggleBulkEventEditAll(false)" class="px-2 py-1.5 border bg-white rounded">選択解除</button>
-                    <span id="bulkEventEditSelectedCount" class="font-bold text-amber-900">0件選択中</span>
-                    <div class="flex items-center gap-1.5 ml-auto">
-                        <label class="font-bold text-amber-900">選択行の色を一括変更：</label>
-                        <input type="color" id="bulkEventEditBatchColor" value="#ec4899" class="w-9 h-7 p-0.5 border rounded bg-white">
-                        <button type="button" onclick="applyBulkEventEditColor()" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded font-bold">適用</button>
-                    </div>
-                </div>
-                <details class="border-t border-amber-200 pt-1.5" open>
-                    <summary class="cursor-pointer font-bold text-purple-900 select-none">🎨 定番イベント・種別の固定カラー＆追加設定（タップで開閉）</summary>
-                    <div class="pt-2 space-y-2">
-                        <div class="flex flex-wrap items-center gap-1.5 bg-white/90 p-2 rounded-xl border border-purple-200">
-                            <span class="font-bold text-purple-900 text-[11px]">＋ 新しい定番イベントを固定追加：</span>
-                            <input type="text" id="newCustomPresetName" placeholder="例：〇〇イベント" class="flex-1 min-w-[140px] px-2 py-1 border border-gray-300 rounded-lg text-[11px] bg-white">
-                            <input type="color" id="newCustomPresetColor" value="#d982a6" class="w-7 h-6 p-0 border rounded bg-white cursor-pointer" title="固定カラーを選択">
-                            <button type="button" onclick="addCustomEventPreset()" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-[11px]">固定に追加</button>
-                        </div>
-                        <div id="fixedColorSettingsGrid" class="flex flex-wrap gap-2"></div>
-                    </div>
-                </details>
-            </div>
-            <div class="flex-1 overflow-auto border rounded-xl">
-                <table class="w-full min-w-[900px] text-[11px] border-collapse">
-                    <thead class="sticky top-0 bg-gray-100 text-gray-700 z-10"><tr>
-                        <th class="p-2 border-b w-8 text-center"><input type="checkbox" id="bulkEventEditCheckAll" onchange="toggleBulkEventEditAll(this.checked)"></th>
-                        <th class="p-2 border-b min-w-[240px]">種別</th><th class="p-2 border-b min-w-[260px]">タイトル（イベントはタブ選択／他はガチャ名）</th><th class="p-2 border-b w-32">開始日</th><th class="p-2 border-b w-32">終了日</th><th class="p-2 border-b w-20">色</th>
-                    </tr></thead><tbody id="bulkEventEditTableBody" class="divide-y divide-gray-100"></tbody>
-                </table>
-            </div>
-            <div class="flex items-center justify-between gap-2 shrink-0 pt-1"><span id="bulkEventEditChangedCount" class="text-[11px] font-bold text-pink-600">変更：0件</span><div class="flex gap-2"><button type="button" onclick="closeBulkEventEditModal()" class="px-3 py-2 bg-gray-100 rounded-lg">キャンセル</button><button type="button" id="bulkEventEditSaveBtn" onclick="saveBulkEventEdits()" disabled class="px-4 py-2 bg-pink-500 disabled:bg-gray-300 text-white rounded-lg font-bold">変更を一括保存</button></div></div>
-        </div>
-    </div>
-
-    <!-- イベント一括貼り付け登録モーダル -->
-    <div id="bulkEventImportModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeBulkEventImportModal()">
-        <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-3 shadow-2xl">
-            <div class="flex justify-between items-center border-b pb-2"><h2 class="text-sm font-bold text-gray-900">📋 イベント一括貼り付け登録</h2><button type="button" onclick="closeBulkEventImportModal()" class="text-gray-400 text-lg">✕</button></div>
-            <p class="text-xs text-gray-500">1行目はヘッダー（種別,タイトル,開始日,終了日,色）。色列は省略時は自動設定されます。</p>
-            <div class="text-[10px] bg-gray-100 p-2 rounded-lg font-mono">category,title,start_date,end_date,color</div>
-            <textarea id="bulkEventText" rows="7" placeholder="category,title,start_date,end_date,color&#10;イベント,水やりイベント,2026-11-22,2026-11-28&#10;短期復刻,星屑のサーカス / 夢見るアリス,2026-11-25,2026-11-27" class="w-full p-3 border border-gray-300 rounded-xl font-mono text-xs"></textarea>
-            <div class="flex gap-2"><button type="button" onclick="closeBulkEventImportModal()" class="flex-1 bg-gray-100 py-2.5 rounded-lg">キャンセル</button><button type="button" onclick="importEventsFromPaste()" class="flex-1 bg-pink-500 text-white py-2.5 rounded-lg font-bold">一括登録</button></div>
-        </div>
-    </div>
 
     <script>
         const SUPABASE_URL = "https://neasnxuvjfxeezrniddh.supabase.co";
@@ -589,7 +393,7 @@
         const EVENT_CATEGORY_OPTIONS = [
             { value: 'イベント', label: '✨ イベント', defaultColor: '#8d79a6', placeholder: 'イベント名を選択または入力' },
             { value: 'ツインズシアター', label: '🎬 ツインズシアター', defaultColor: '#c4839c', placeholder: 'ガチャ・タイトル名を入力' },
-            { value: 'ツインズメモリー', label: '📷 ツインズメモリー', defaultColor: '#9b84b8', placeholder: '対象ガチャ3〜4個（例：ガチャA / ガチャB / ガチャC）' },
+            { value: 'ツインズメモリー', label: '📷 ツインズメモリー', defaultColor: '#9b84b8', placeholder: '対象ガチャ最大8個（例：ガチャA / ガチャB / ...）' },
             { value: '短期復刻', label: '🔁 短期復刻', defaultColor: '#d48c70', placeholder: '復刻ガチャ名（複数なら / 区切り）' },
             { value: '福袋', label: '🎁 福袋', defaultColor: '#cfa47c', placeholder: '福袋タイトルを入力' },
             { value: 'choicebag', label: '🛍️ choicebag', defaultColor: '#7aa6b8', placeholder: 'choicebagタイトルを入力' }
@@ -802,7 +606,7 @@
 
         function splitMultiTitles(rawTitle) {
             return String(rawTitle || '')
-                .split(/[\r\n／/・、,]+/)
+                .split(/(?:\r?\n|\s+\/\s+|／|・|、|,)+/)
                 .map(s => s.trim())
                 .filter(Boolean);
         }
@@ -856,6 +660,7 @@
             renderCalendar();
             renderSelectedDateEvents();
             loadAllSchedules();
+            trackDailyPageView();
         }
 
         if (document.readyState === 'loading') {
@@ -962,7 +767,7 @@
         }
 
         function getFilteredSchedules() {
-            return allSchedules;
+            return [...allSchedules];
         }
 
         // 上部の注目バー（ニュースティッカー風に右から左へ流れる表示）
@@ -1344,9 +1149,6 @@
             const label = `${d.getMonth() + 1}月${d.getDate()}日(${WEEKDAYS_JA[d.getDay()]})の開催一覧`;
             headingEl.innerHTML = `<span>📌</span><span>${label}</span>`;
 
-            const addBtn = document.getElementById('addOnDateBtn');
-            if (addBtn) addBtn.classList.toggle('hidden', !isAdminUnlocked);
-
             const scoped = getFilteredSchedules();
             const list = scoped.filter(ev => {
                 if (!ev.start_date) return false;
@@ -1390,9 +1192,7 @@
                     statusBadges += `<span class="text-[10px] bg-gradient-to-r from-pink-500 to-amber-500 text-white px-2 py-0.5 rounded-full font-extrabold">NEW</span>`;
                 }
 
-                const editBtn = (ev.source === 'event' && isAdminUnlocked)
-                    ? `<button type="button" onclick="openEditEventModal(${ev.id})" class="text-[11px] text-pink-600 bg-pink-50 border border-pink-200 px-2.5 py-1 rounded-lg font-bold hover:bg-pink-100 shrink-0">編集</button>`
-                    : '';
+                const editBtn = '';
 
                 const multiList = (ev.category === 'ツインズメモリー' || isTheaterReissue)
                     ? splitMultiTitles(ev.title)
@@ -1400,23 +1200,12 @@
                 const reissueSubTag = (ev._isShortReissue && ev._reissueStatus === 'reissuing')
                     ? `<span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold shrink-0">復刻中</span>`
                     : '';
+                const isTwinsMemoryMulti = ev.category === 'ツインズメモリー' && multiList.length >= 4;
                 const titleBlockHtml = multiList.length > 1
-                    ? `<div class="space-y-1 pt-0.5">
-                        ${multiList.map(t => `<div class="text-xs font-bold text-gray-900 flex items-center gap-1.5"><span class="text-pink-400">・</span><span class="truncate">${escapeHtml(t)}</span>${reissueSubTag}</div>`).join('')}
+                    ? `<div class="${isTwinsMemoryMulti ? 'grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1' : 'space-y-1'} pt-0.5">
+                        ${multiList.map(t => `<div class="text-xs font-bold text-gray-900 flex items-center gap-1 min-w-0"><span class="text-pink-400 shrink-0">・</span><span class="truncate">${escapeHtml(t)}</span>${reissueSubTag}</div>`).join('')}
                        </div>`
                     : `<div class="text-sm font-extrabold text-gray-900 break-words">${escapeHtml(ev.title || ev.category)}</div>`;
-
-                const prevInfo = getPreviousOccurrenceInfo(ev);
-                const prevBadgeHtml = prevInfo
-                    ? `<button type="button" onclick="openHistoryModal('${escapeHtml(prevInfo.groupKey)}')" class="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-purple-50/90 hover:bg-purple-100 text-purple-800 border border-purple-200/80 font-bold transition-colors">
-                        <span>🕒 前回：${escapeHtml(prevInfo.periodLabel)}（${escapeHtml(prevInfo.agoLabel)}）</span>
-                        <span class="text-purple-400">▸</span>
-                       </button>`
-                    : (!ev._isPureGacha && ev.category !== '短期復刻')
-                        ? `<button type="button" onclick="openHistoryModal('${escapeHtml(getHistoryGroupKey(ev))}')" class="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gray-100/80 hover:bg-purple-50 text-gray-500 hover:text-purple-700 border border-gray-200/80 font-medium transition-colors">
-                            <span>🕒 前回記録なし（履歴を見る）</span>
-                           </button>`
-                        : '';
 
                 return `
                     <div style="${!ev._isPureGacha && ev.color ? `border-left:5px solid ${ev.color};` : ''}" class="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3 flex items-center justify-between gap-2">
@@ -1427,7 +1216,6 @@
                                 <span class="text-[11px] text-gray-500 font-medium">${period}</span>
                             </div>
                             ${titleBlockHtml}
-                            ${prevBadgeHtml}
                         </div>
                         ${editBtn}
                     </div>
@@ -1435,566 +1223,7 @@
             }).join('');
         }
 
-        // 管理者認証
-        function getAdminPasscode() {
-            return localStorage.getItem(ADMIN_PASS_STORAGE_KEY) || 'gkbssr953D';
-        }
-
-        function updateAdminHeaderBtn() {
-            const btn = document.getElementById('adminToggleBtn');
-            if (!btn) return;
-            if (isAdminUnlocked) {
-                btn.textContent = '🔓 管理';
-                btn.className = 'text-xs px-3.5 py-2 rounded-full font-bold transition-all ring-2 ring-amber-300';
-            } else {
-                btn.textContent = '🔒 管理';
-                btn.className = 'text-xs px-3.5 py-2 rounded-full font-bold transition-all';
-            }
-            renderSelectedDateEvents();
-        }
-
-        function openAdminGateModal() {
-            if (isAdminUnlocked) {
-                openAdminConsoleModal();
-                return;
-            }
-            document.getElementById('adminPasscodeError').classList.add('hidden');
-            const input = document.getElementById('adminPasscodeInput');
-            input.value = '';
-            document.getElementById('adminGateModal').classList.remove('hidden');
-            setTimeout(() => input.focus(), 50);
-        }
-
-        function closeAdminGateModal() {
-            document.getElementById('adminGateModal').classList.add('hidden');
-        }
-
-        function verifyAdminPasscode() {
-            const entered = (document.getElementById('adminPasscodeInput').value || '').trim();
-            if (entered === getAdminPasscode()) {
-                isAdminUnlocked = true;
-                updateAdminHeaderBtn();
-                closeAdminGateModal();
-                openAdminConsoleModal();
-            } else {
-                document.getElementById('adminPasscodeError').classList.remove('hidden');
-            }
-        }
-
-        function openAdminConsoleModal() {
-            if (!isAdminUnlocked) { openAdminGateModal(); return; }
-            document.getElementById('adminConsoleModal').classList.remove('hidden');
-        }
-
-        function closeAdminConsoleModal() {
-            document.getElementById('adminConsoleModal').classList.add('hidden');
-        }
-
-        function lockAdminSession() {
-            isAdminUnlocked = false;
-            updateAdminHeaderBtn();
-            closeAdminConsoleModal();
-        }
-
-        function changeAdminPasscode() {
-            const nextCode = prompt('新しい管理者パスコードを入力してください:', '');
-            if (nextCode === null) return;
-            const trimmed = nextCode.trim();
-            if (!trimmed) { alert('空のパスコードは設定できません。'); return; }
-            localStorage.setItem(ADMIN_PASS_STORAGE_KEY, trimmed);
-            alert('✅ 管理者パスコードを更新しました。');
-        }
-
-        // イベント登録・編集
-        function getDefaultColorForEvent(category, title) {
-            return resolveFixedEventColor(category, title, '#8d79a6');
-        }
-
-        function renderSingleEventCategoryAndTitleUI(autoColor = false) {
-            const cat = document.getElementById('eventCategoryInput').value || 'イベント';
-            const titleInp = document.getElementById('eventTitleInput');
-            const currentTitle = (titleInp.value || '').trim();
-            const catWrap = document.getElementById('singleEventCategoryTabs');
-            const subWrap = document.getElementById('singleEventSubtypeTabs');
-            const titleLbl = document.getElementById('eventTitleLabel');
-
-            if (catWrap) {
-                catWrap.innerHTML = EVENT_CATEGORY_OPTIONS.map(opt => {
-                    const active = opt.value.toLowerCase() === cat.toLowerCase();
-                    const cls = active
-                        ? 'bg-pink-500 text-white border-pink-500 font-bold shadow-2xs'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-pink-50';
-                    return `<button type="button" onclick="selectSingleEventCategory('${opt.value}')" class="px-2.5 py-1 rounded-lg border text-[11px] transition-colors ${cls}">${opt.label}</button>`;
-                }).join('');
-            }
-
-            const catOpt = EVENT_CATEGORY_OPTIONS.find(c => c.value.toLowerCase() === cat.toLowerCase()) || EVENT_CATEGORY_OPTIONS[0];
-            if (catOpt.value === 'イベント') {
-                if (titleLbl) titleLbl.innerHTML = `2. イベント名（タブ選択 or 自由入力） <span class="text-rose-500">*</span>`;
-                if (subWrap) {
-                    subWrap.classList.remove('hidden');
-                    subWrap.innerHTML = getEventSubtypeTabs().map(sub => {
-                        const active = currentTitle === sub.value;
-                        const cls = active
-                            ? 'bg-purple-500 text-white border-purple-500 font-bold shadow-2xs'
-                            : 'bg-purple-50/70 text-purple-900 border-purple-200 hover:bg-purple-100';
-                        return `<button type="button" onclick="selectSingleEventSubtype('${escapeHtml(sub.value)}')" class="px-2.5 py-1 rounded-full border text-[11px] transition-colors ${cls}">${escapeHtml(sub.value)}</button>`;
-                    }).join('') + `<button type="button" onclick="saveCurrentInputAsCustomPreset()" class="px-2.5 py-1 rounded-full border border-dashed border-pink-400 bg-pink-50/80 text-pink-700 hover:bg-pink-100 text-[11px] font-bold">＋ 入力名を定番固定</button>`;
-                }
-            } else {
-                if (titleLbl) titleLbl.innerHTML = `2. タイトル／ガチャ名 <span class="text-rose-500">*</span>`;
-                if (subWrap) {
-                    subWrap.classList.add('hidden');
-                    subWrap.innerHTML = '';
-                }
-            }
-            if (titleInp) titleInp.placeholder = catOpt.placeholder;
-            if (autoColor) {
-                const colorInp = document.getElementById('eventColorInput');
-                if (colorInp) colorInp.value = getDefaultColorForEvent(catOpt.value, titleInp.value.trim());
-            }
-        }
-
-        function selectSingleEventCategory(cat) {
-            document.getElementById('eventCategoryInput').value = cat;
-            renderSingleEventCategoryAndTitleUI(true);
-        }
-
-        function selectSingleEventSubtype(subTitle) {
-            document.getElementById('eventTitleInput').value = subTitle;
-            renderSingleEventCategoryAndTitleUI(true);
-        }
-
-        function saveCurrentInputAsCustomPreset() {
-            const titleInp = document.getElementById('eventTitleInput');
-            const colorInp = document.getElementById('eventColorInput');
-            const name = (titleInp?.value || '').trim();
-            const color = colorInp?.value || '#d982a6';
-            if (!name) {
-                alert('先に下の入力欄へ固定したいイベント名を入力してください。');
-                if (titleInp) titleInp.focus();
-                return;
-            }
-            const exists = getAllFixedColorItems().some(it => it.key === name);
-            if (exists) {
-                alert(`「${name}」はすでに定番イベントに登録されています。`);
-                return;
-            }
-            const list = getCustomEventPresets();
-            list.push({ value: name, defaultColor: color });
-            setCustomEventPresets(list);
-
-            const savedColors = getSpecialCategoryColors();
-            savedColors[name] = color;
-            setSpecialCategoryColors(savedColors);
-
-            renderSingleEventCategoryAndTitleUI(false);
-            alert(`「${name}」を定番タブ＆固定カラーに追加しました！`);
-        }
-
-        function openEventEditorModal(defaultDate = todayStr) {
-            document.getElementById('eventEditorTitle').textContent = '📅 イベントを登録';
-            document.getElementById('editEventId').value = '';
-            document.getElementById('eventCategoryInput').value = 'イベント';
-            document.getElementById('eventTitleInput').value = '水やりイベント';
-            document.getElementById('eventColorInput').value = getDefaultColorForEvent('イベント', '水やりイベント');
-            document.getElementById('eventStartInput').value = defaultDate;
-            document.getElementById('eventEndInput').value = '';
-            document.getElementById('deleteEventBtn').classList.add('hidden');
-            renderSingleEventCategoryAndTitleUI(false);
-            document.getElementById('eventEditorModal').classList.remove('hidden');
-        }
-
-        function openAddModalForSelectedDate() {
-            openEventEditorModal(selectedDateStr);
-        }
-
-        function openEditEventModal(id) {
-            const ev = allSchedules.find(e => e.source === 'event' && e.id === id);
-            if (!ev) return;
-            document.getElementById('eventEditorTitle').textContent = '✏️ イベントを編集';
-            document.getElementById('editEventId').value = ev.id;
-            document.getElementById('eventCategoryInput').value = ev.category || 'イベント';
-            document.getElementById('eventTitleInput').value = ev.title;
-            document.getElementById('eventColorInput').value = ev.color || getDefaultColorForEvent(ev.category, ev.title);
-            document.getElementById('eventStartInput').value = ev.start_date;
-            document.getElementById('eventEndInput').value = ev.end_date || '';
-            document.getElementById('deleteEventBtn').classList.remove('hidden');
-            renderSingleEventCategoryAndTitleUI(false);
-            document.getElementById('eventEditorModal').classList.remove('hidden');
-        }
-
-        function closeEventEditorModal() {
-            document.getElementById('eventEditorModal').classList.add('hidden');
-        }
-
-        async function saveEvent() {
-            const id = document.getElementById('editEventId').value;
-            const category = document.getElementById('eventCategoryInput').value;
-            const title = document.getElementById('eventTitleInput').value.trim();
-            const start_date = document.getElementById('eventStartInput').value;
-            const end_date = document.getElementById('eventEndInput').value || start_date;
-
-            if (!title || !start_date) {
-                alert('タイトルと開始日を入力してください。');
-                return;
-            }
-
-            const payload = { title, category, start_date, end_date, color: parseEventColor(document.getElementById('eventColorInput').value) };
-            const { error } = id
-                ? await supabaseClient.from('events').update(payload).eq('id', id)
-                : await supabaseClient.from('events').insert([payload]);
-
-            if (error) {
-                alert('保存に失敗しました:\n' + error.message);
-                return;
-            }
-
-            closeEventEditorModal();
-            await loadAllSchedules();
-        }
-
-        // イベント一括編集（eventsテーブルのイベント＋items由来の福袋・Choicebag・ドリフェス等の色設定に対応）
-        let bulkEventEditDrafts = new Map();
-        let bulkEventEditChecked = new Set();
-        let specialCatColorsDraft = { ...DEFAULT_SPECIAL_CATEGORY_COLORS };
-        let specialCatColorsInitial = { ...DEFAULT_SPECIAL_CATEGORY_COLORS };
-
-        const BASE_FIXED_COLOR_ITEMS = [
-            { key: '水やりイベント', label: '💧 水やりイベント' },
-            { key: 'パーティービンゴ', label: '🎯 パーティービンゴ' },
-            { key: 'ドリフェス', label: '🎵 ドリフェス' },
-            { key: 'ツインズツアー', label: '🧭 ツインズツアー' },
-            { key: 'ミラクルスケッチ', label: '🎨 ミラクルスケッチ' },
-            { key: 'ツインズシアター', label: '🎬 ツインズシアター' },
-            { key: 'ツインズメモリー', label: '📷 ツインズメモリー' },
-            { key: '短期復刻', label: '🔁 短期復刻' },
-            { key: 'fukubukuro', label: '🎁 福袋' },
-            { key: 'choicebag', label: '🛍️ Choicebag' },
-            { key: 'その他イベント', label: '✨ その他イベント' }
-        ];
-
-        function getAllFixedColorItems() {
-            const customs = getCustomEventPresets().map(p => ({
-                key: p.value,
-                label: `🌟 ${p.value}`,
-                isCustom: true,
-                defaultColor: p.defaultColor
-            }));
-            return [...BASE_FIXED_COLOR_ITEMS, ...customs];
-        }
-
-        function renderFixedColorSettingsUI() {
-            const grid = document.getElementById('fixedColorSettingsGrid');
-            if (!grid) return;
-            grid.innerHTML = getAllFixedColorItems().map(item => {
-                const val = specialCatColorsDraft[item.key] || item.defaultColor || DEFAULT_SPECIAL_CATEGORY_COLORS[item.key] || '#8d79a6';
-                const delBtn = item.isCustom
-                    ? `<button type="button" onclick="event.preventDefault(); removeCustomEventPreset('${escapeHtml(item.key)}')" title="定番リストから削除" class="ml-0.5 text-rose-500 hover:text-rose-700 font-extrabold px-1">✕</button>`
-                    : '';
-                return `
-                    <label class="inline-flex items-center gap-1.5 font-bold text-gray-800 bg-white px-2 py-1 rounded-lg border border-purple-200 text-[11px]">
-                        <span>${escapeHtml(item.label)}</span>
-                        <input type="color" value="${escapeHtml(val)}" onchange="previewSpecialCatColor('${escapeHtml(item.key)}', this.value)" class="w-6 h-5 p-0 border rounded bg-white cursor-pointer">
-                        ${delBtn}
-                    </label>
-                `;
-            }).join('');
-        }
-
-        function addCustomEventPreset() {
-            const nameInp = document.getElementById('newCustomPresetName');
-            const colorInp = document.getElementById('newCustomPresetColor');
-            if (!nameInp || !colorInp) return;
-            const name = nameInp.value.trim();
-            const color = colorInp.value || '#d982a6';
-            if (!name) {
-                alert('追加する定番イベント名を入力してください。');
-                return;
-            }
-            const exists = getAllFixedColorItems().some(it => it.key === name);
-            if (exists) {
-                alert('同じ名前の定番イベントがすでに登録されています。');
-                return;
-            }
-            const list = getCustomEventPresets();
-            list.push({ value: name, defaultColor: color });
-            setCustomEventPresets(list);
-
-            specialCatColorsDraft[name] = color;
-            const savedColors = getSpecialCategoryColors();
-            savedColors[name] = color;
-            setSpecialCategoryColors(savedColors);
-            specialCatColorsInitial[name] = color;
-
-            nameInp.value = '';
-            renderFixedColorSettingsUI();
-            renderBulkEventEditTable();
-            alert(`「${name}」を定番イベント＆固定カラーに追加しました！`);
-        }
-
-        function removeCustomEventPreset(name) {
-            if (!confirm(`定番イベント「${name}」をリストから削除しますか？（すでに登録済みのカレンダー予定は消えません）`)) return;
-            const nextList = getCustomEventPresets().filter(p => p.value !== name);
-            setCustomEventPresets(nextList);
-            delete specialCatColorsDraft[name];
-            delete specialCatColorsInitial[name];
-            const savedColors = getSpecialCategoryColors();
-            delete savedColors[name];
-            setSpecialCategoryColors(savedColors);
-            renderFixedColorSettingsUI();
-            renderBulkEventEditTable();
-        }
-
-        function previewSpecialCatColor(typeKey, color) {
-            if (!color) return;
-            specialCatColorsDraft[typeKey] = color;
-            // 現在開いている下書きにも固定色を即時プレビュー反映
-            bulkEventEditDrafts.forEach(d => {
-                const isTarget =
-                    (typeKey === 'fukubukuro' && d.category === '福袋') ||
-                    (typeKey === 'choicebag' && d.category.toLowerCase() === 'choicebag') ||
-                    (d.category === typeKey) ||
-                    (d.category === 'イベント' && d.title.trim() === typeKey);
-                if (isTarget) {
-                    d.color = color;
-                }
-            });
-            renderBulkEventEditTable();
-        }
-
-        function openBulkEventEditModal() {
-            bulkEventEditDrafts = new Map(); bulkEventEditChecked.clear();
-            const monthSet = new Set();
-            const currentViewYM = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
-            monthSet.add(currentViewYM);
-
-            allSchedules.filter(ev => ev.source === 'event').forEach(ev => {
-                const color = resolveFixedEventColor(ev.category, ev.title, ev.color || '#8d79a6');
-                if (ev.start_date && ev.start_date.length >= 7) monthSet.add(ev.start_date.slice(0, 7));
-                if (ev.end_date && ev.end_date.length >= 7) monthSet.add(ev.end_date.slice(0, 7));
-                bulkEventEditDrafts.set(String(ev.id), {
-                    id: ev.id,
-                    title: ev.title || '',
-                    category: ev.category || 'イベント',
-                    start_date: ev.start_date || '',
-                    end_date: ev.end_date || ev.start_date || '',
-                    color,
-                    original: {
-                        title: ev.title || '',
-                        category: ev.category || 'イベント',
-                        start_date: ev.start_date || '',
-                        end_date: ev.end_date || ev.start_date || '',
-                        color: ev.color || color
-                    }
-                });
-            });
-
-            const monthSel = document.getElementById('bulkEventEditMonthFilter');
-            if (monthSel) {
-                const sortedMonths = Array.from(monthSet).sort((a, b) => b.localeCompare(a));
-                monthSel.innerHTML = sortedMonths.map(ym => {
-                    const [y, m] = ym.split('-');
-                    return `<option value="${ym}" ${ym === currentViewYM ? 'selected' : ''}>📅 ${y}年${Number(m)}月のイベント</option>`;
-                }).join('') + `<option value="SEARCH_ONLY">🔍 検索ワード一致のみ表示</option><option value="ALL">📋 すべての期間を表示（${bulkEventEditDrafts.size}件）</option>`;
-            }
-
-            specialCatColorsInitial = getSpecialCategoryColors();
-            specialCatColorsDraft = { ...specialCatColorsInitial };
-            renderFixedColorSettingsUI();
-            document.getElementById('bulkEventEditSearch').value = '';
-            document.getElementById('bulkEventEditBatchColor').value = '#ec4899';
-            renderBulkEventEditTable();
-            document.getElementById('bulkEventEditModal').classList.remove('hidden');
-        }
-        function closeBulkEventEditModal() { document.getElementById('bulkEventEditModal').classList.add('hidden'); }
-        function bulkEventEditIsChanged(d) {
-            const o = d.original;
-            return d.title.trim() !== o.title.trim() || d.category !== o.category || d.start_date !== o.start_date || d.end_date !== o.end_date || d.color !== o.color;
-        }
-        function getChangedSpecialCatCount() {
-            return getAllFixedColorItems().filter(item => specialCatColorsDraft[item.key] !== specialCatColorsInitial[item.key]).length;
-        }
-        function getBulkEventEditFiltered() {
-            const monthVal = document.getElementById('bulkEventEditMonthFilter')?.value || 'ALL';
-            const q = (document.getElementById('bulkEventEditSearch')?.value || '').trim().toLowerCase();
-
-            if (monthVal === 'SEARCH_ONLY' && !q) {
-                return [];
-            }
-
-            return Array.from(bulkEventEditDrafts.values()).filter(d => {
-                if (monthVal !== 'ALL' && monthVal !== 'SEARCH_ONLY') {
-                    const sYM = (d.start_date || '').slice(0, 7);
-                    const eYM = (d.end_date || d.start_date || '').slice(0, 7);
-                    const inMonth = (sYM && eYM) ? (sYM <= monthVal && eYM >= monthVal) : (sYM === monthVal);
-                    if (!inMonth) return false;
-                }
-                if (!q) return true;
-                return d.title.toLowerCase().includes(q) || d.category.toLowerCase().includes(q);
-            });
-        }
-
-        function selectBulkEventCategoryTab(id, catValue) {
-            const d = bulkEventEditDrafts.get(String(id));
-            if (!d) return;
-            d.category = catValue;
-            if (catValue === 'イベント' && !d.title.trim()) {
-                d.title = getEventSubtypeTabs()[0].value;
-            }
-            d.color = resolveFixedEventColor(d.category, d.title, d.color);
-            renderBulkEventEditTable();
-        }
-
-        function selectBulkEventSubtypeTab(id, subValue) {
-            const d = bulkEventEditDrafts.get(String(id));
-            if (!d) return;
-            d.title = subValue;
-            d.color = resolveFixedEventColor(d.category, d.title, d.color);
-            renderBulkEventEditTable();
-        }
-
-        function renderBulkEventEditTable() {
-            const tbody=document.getElementById('bulkEventEditTableBody'); const rows=getBulkEventEditFiltered();
-            const monthVal = document.getElementById('bulkEventEditMonthFilter')?.value || 'ALL';
-            if(!rows.length){
-                const emptyMsg = monthVal === 'SEARCH_ONLY'
-                    ? '上の検索ボックスにイベント名を入力すると該当データだけ表示されます'
-                    : '条件に一致するイベントがありません';
-                tbody.innerHTML=`<tr><td colspan="6" class="p-6 text-center text-gray-400">${emptyMsg}</td></tr>`;
-                updateBulkEventEditCounts();
-                return;
-            }
-            tbody.innerHTML=rows.map(d=>{
-                const id=String(d.id);
-                const safeId=escapeHtml(id);
-                const changed=bulkEventEditIsChanged(d);
-                const checked=bulkEventEditChecked.has(id);
-                const bg=changed?'bg-amber-50':'bg-white';
-                const activeCat = EVENT_CATEGORY_OPTIONS.find(c => c.value.toLowerCase() === String(d.category || '').toLowerCase()) || EVENT_CATEGORY_OPTIONS[0];
-
-                const catTabsHtml = EVENT_CATEGORY_OPTIONS.map(opt => {
-                    const isAct = opt.value.toLowerCase() === String(d.category || '').toLowerCase();
-                    const btnCls = isAct
-                        ? 'bg-pink-500 text-white border-pink-500 font-bold shadow-2xs'
-                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-pink-50';
-                    return `<button type="button" onclick="selectBulkEventCategoryTab('${safeId}','${opt.value}')" class="px-1.5 py-0.5 rounded-md border text-[10px] leading-tight transition-colors ${btnCls}">${opt.value}</button>`;
-                }).join('');
-
-                let titleCellHtml = '';
-                if (activeCat.value === 'イベント') {
-                    const subTabsHtml = getEventSubtypeTabs().map(sub => {
-                        const isSubAct = d.title.trim() === sub.value;
-                        const subCls = isSubAct
-                            ? 'bg-purple-500 text-white border-purple-500 font-bold shadow-2xs'
-                            : 'bg-purple-50/70 text-purple-900 border-purple-200 hover:bg-purple-100';
-                        return `<button type="button" onclick="selectBulkEventSubtypeTab('${safeId}','${sub.value}')" class="px-1.5 py-0.5 rounded-full border text-[10px] leading-tight transition-colors ${subCls}">${sub.value}</button>`;
-                    }).join('');
-                    titleCellHtml = `
-                        <div class="space-y-1">
-                            <div class="flex flex-wrap gap-1">${subTabsHtml}</div>
-                            <input type="text" value="${escapeHtml(d.title)}" placeholder="その他のイベント名も入力可" onchange="updateBulkEventEditField('${safeId}','title',this.value)" class="w-full p-1 border rounded bg-white text-[11px]">
-                        </div>
-                    `;
-                } else {
-                    titleCellHtml = `<input type="text" value="${escapeHtml(d.title)}" placeholder="${escapeHtml(activeCat.placeholder)}" onchange="updateBulkEventEditField('${safeId}','title',this.value)" class="w-full p-1.5 border rounded bg-white">`;
-                }
-
-                return `<tr data-event-edit-id="${safeId}" class="${bg}">
-                    <td class="p-1.5 text-center align-top pt-2.5"><input type="checkbox" ${checked?'checked':''} onchange="toggleBulkEventEditRow('${safeId}',this.checked)"></td>
-                    <td class="p-1.5 align-top"><div class="flex flex-wrap gap-1">${catTabsHtml}</div></td>
-                    <td class="p-1.5 align-top">${titleCellHtml}</td>
-                    <td class="p-1.5 align-top"><input type="date" value="${escapeHtml(d.start_date)}" onchange="updateBulkEventEditField('${safeId}','start_date',this.value)" class="w-full p-1 border rounded bg-white"></td>
-                    <td class="p-1.5 align-top"><input type="date" value="${escapeHtml(d.end_date)}" onchange="updateBulkEventEditField('${safeId}','end_date',this.value)" class="w-full p-1 border rounded bg-white"></td>
-                    <td class="p-1.5 align-top"><div class="flex items-center gap-1"><input type="color" value="${escapeHtml(d.color)}" onchange="updateBulkEventEditField('${safeId}','color',this.value)" class="w-8 h-7 p-0.5 border rounded"><span class="text-[9px] text-gray-500">${escapeHtml(d.color)}</span></div></td>
-                </tr>`;
-            }).join('');
-            const checkAll=document.getElementById('bulkEventEditCheckAll'); if(checkAll)checkAll.checked=rows.length>0&&rows.every(r=>bulkEventEditChecked.has(String(r.id)));
-            updateBulkEventEditCounts();
-        }
-        function updateBulkEventEditField(id,field,value) {
-            const d=bulkEventEditDrafts.get(String(id));
-            if(!d)return;
-            d[field]=value;
-            if (field === 'title' || field === 'category') {
-                d.color = resolveFixedEventColor(d.category, d.title, d.color);
-            }
-            renderBulkEventEditTable();
-        }
-        function toggleBulkEventEditRow(id,checked) { if(checked)bulkEventEditChecked.add(String(id));else bulkEventEditChecked.delete(String(id)); updateBulkEventEditCounts(); }
-        function toggleBulkEventEditAll(checked) { getBulkEventEditFiltered().forEach(d=>checked?bulkEventEditChecked.add(String(d.id)):bulkEventEditChecked.delete(String(d.id))); renderBulkEventEditTable(); }
-        function updateBulkEventEditCounts() { const visible=getBulkEventEditFiltered(); const selected=bulkEventEditChecked.size; const changedCount=Array.from(bulkEventEditDrafts.values()).filter(bulkEventEditIsChanged).length + getChangedSpecialCatCount(); const a=document.getElementById('bulkEventEditSelectedCount');const b=document.getElementById('bulkEventEditChangedCount');const c=document.getElementById('bulkEventEditSaveBtn'); if(a)a.textContent=`${selected}件選択中`;if(b)b.textContent=`変更：${changedCount}件`;if(c)c.disabled=changedCount===0;const all=document.getElementById('bulkEventEditCheckAll');if(all)all.checked=visible.length>0&&visible.every(d=>bulkEventEditChecked.has(String(d.id))); }
-        function applyBulkEventEditColor() { if(!bulkEventEditChecked.size){alert('色を変更するイベントにチェックしてください。');return;}const color=document.getElementById('bulkEventEditBatchColor').value;bulkEventEditChecked.forEach(id=>{const d=bulkEventEditDrafts.get(id);if(d)d.color=color;});renderBulkEventEditTable(); }
-        async function saveBulkEventEdits() {
-            const changed=Array.from(bulkEventEditDrafts.values()).filter(bulkEventEditIsChanged);
-            const specialChangedCnt=getChangedSpecialCatCount();
-            if(!changed.length && !specialChangedCnt)return;
-            const totalChanges = changed.length + specialChangedCnt;
-            if(!confirm(`${totalChanges}件の変更を保存しますか？`))return;
-            const btn=document.getElementById('bulkEventEditSaveBtn');btn.disabled=true;btn.textContent='保存中…';
-            for(const d of changed){
-                const finalTitle = d.title.trim();
-                if (!finalTitle) {
-                    alert('タイトルが空欄の行があります。');
-                    btn.disabled = false;
-                    btn.textContent = '変更を一括保存';
-                    return;
-                }
-                const payload={title:finalTitle,category:d.category,start_date:d.start_date,end_date:d.end_date||d.start_date,color:d.color};
-                const {error}=await supabaseClient.from('events').update(payload).eq('id',d.id);
-                if(error){alert(`保存に失敗しました（${d.title}）:\n${error.message}\n\n色の保存にはeventsテーブルのcolor列が必要です。`);btn.disabled=false;btn.textContent='変更を一括保存';return;}
-            }
-            if (specialChangedCnt) {
-                setSpecialCategoryColors(specialCatColorsDraft);
-                const updatedPresets = getCustomEventPresets().map(p => ({
-                    ...p,
-                    defaultColor: specialCatColorsDraft[p.value] || p.defaultColor
-                }));
-                setCustomEventPresets(updatedPresets);
-            }
-            closeBulkEventEditModal();await loadAllSchedules();alert(`${totalChanges}件の変更を更新しました。`);
-        }
-
-        function parseEventColor(value) { const v=(value||'').trim(); const colors={'紫':'#a855f7','ピンク':'#ec4899','オレンジ':'#f59e0b','青緑':'#14b8a6','青':'#3b82f6','緑':'#22c55e','赤':'#ef4444','グレー':'#64748b'}; return colors[v] || (/^#[0-9a-fA-F]{6}$/.test(v) ? v : '#a855f7'); }
-        function openBulkEventImportModal(){document.getElementById('bulkEventText').value='';document.getElementById('bulkEventImportModal').classList.remove('hidden');}
-        function closeBulkEventImportModal(){document.getElementById('bulkEventImportModal').classList.add('hidden');}
-        function parseCsvLine(line){const cells=[];let cell='',quoted=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(quoted&&line[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(ch===','&&!quoted){cells.push(cell.trim());cell='';}else cell+=ch;}cells.push(cell.trim());return cells;}
-        async function importEventsFromPaste(){
-            const raw=document.getElementById('bulkEventText').value.trim();
-            if(!raw){alert('貼り付けデータがありません。');return;}
-            const lines=raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-            const rows=lines.slice(1).map(parseCsvLine);
-            const payloads=[];
-            for(const row of rows){
-                const [rawCat,rawTitle,start_date,end_date,color]=row;
-                const category=(rawCat||'イベント').trim();
-                const title=(rawTitle||'').trim();
-                if(!title||!start_date)continue;
-                const resolvedColor=(color&&color.trim())?parseEventColor(color):getDefaultColorForEvent(category,title);
-                payloads.push({title,category,start_date,end_date:end_date||start_date,color:resolvedColor});
-            }
-            if(!payloads.length){alert('登録できる行がありません。');return;}
-            if(!confirm(`${payloads.length}件のイベントを一括登録しますか？`))return;
-            const {error}=await supabaseClient.from('events').insert(payloads);
-            if(error){alert('一括登録に失敗しました:\n'+error.message);return;}
-            closeBulkEventImportModal();await loadAllSchedules();alert(`${payloads.length}件登録しました。`);
-        }
-
-        async function deleteCurrentEvent() {
-            const id = document.getElementById('editEventId').value;
-            if (!id || !confirm('このイベントを削除しますか？')) return;
-
-            const { error } = await supabaseClient.from('events').delete().eq('id', id);
-            if (error) {
-                alert('削除エラー: ' + error.message);
-                return;
-            }
-            closeEventEditorModal();
-            await loadAllSchedules();
-        }
-
-
-        // 開催履歴・周期集計（ガチャ・短期復刻以外）
+        // 開催履歴（ガチャ・短期復刻以外）
         function isHistoryTargetSchedule(ev) {
             if (!ev || !ev.start_date) return false;
             if (ev._isPureGacha) return false;
@@ -2017,9 +1246,7 @@
                 return `イベント::${(ev.title || '').trim()}`;
             }
             if (cat === 'ツインズシアター') {
-                const t = (ev.title || '').trim();
-                const norm = (t && t !== 'ツインズシアター') ? normalizeTheaterTitleKey(t) : '_default';
-                return `ツインズシアター::${norm}`;
+                return 'ツインズシアター';
             }
             if (catLow === 'choicebag' || ev._isChoicebag) {
                 return 'choicebag';
@@ -2035,46 +1262,10 @@
                 const name = groupKey.slice('イベント::'.length);
                 return { category: 'イベント', label: name || 'イベント' };
             }
-            if (groupKey.startsWith('ツインズシアター::')) {
-                const gachaTitle = (sampleItem && sampleItem.title && sampleItem.title.trim() && sampleItem.title.trim() !== 'ツインズシアター')
-                    ? sampleItem.title.trim()
-                    : 'ツインズシアター';
-                return { category: 'ツインズシアター', label: gachaTitle };
+            if (groupKey === 'ツインズシアター') {
+                return { category: 'ツインズシアター', label: 'ツインズシアター' };
             }
             return { category: groupKey, label: groupKey };
-        }
-
-        function formatRelativeSpanLabel(daysDiff) {
-            if (daysDiff <= 0) return '同日';
-            if (daysDiff < 30) return `${daysDiff}日前`;
-            const months = Math.round(daysDiff / 30);
-            if (months < 12) return `約${months}ヶ月前`;
-            const years = (daysDiff / 365).toFixed(1).replace(/\.0$/, '');
-            return `約${years}年前`;
-        }
-
-        function getPreviousOccurrenceInfo(ev) {
-            if (!isHistoryTargetSchedule(ev)) return null;
-            const groupKey = getHistoryGroupKey(ev);
-            const sameGroup = allSchedules
-                .filter(item => isHistoryTargetSchedule(item) && getHistoryGroupKey(item) === groupKey)
-                .filter(item => item.start_date < ev.start_date)
-                .sort((a, b) => b.start_date.localeCompare(a.start_date));
-
-            if (!sameGroup.length) return null;
-            const prev = sameGroup[0];
-            const dCur = parseLocalDate(ev.start_date);
-            const dPrev = parseLocalDate(prev.start_date);
-            const diffDays = (dCur && dPrev) ? Math.round((dCur.getTime() - dPrev.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-            const periodLabel = prev.start_date === prev.end_date
-                ? formatShortMD(prev.start_date)
-                : `${prev.start_date.replace(/-/g, '/')}〜${formatShortMD(prev.end_date)}`;
-            return {
-                groupKey,
-                prevItem: prev,
-                periodLabel,
-                agoLabel: formatRelativeSpanLabel(diffDays)
-            };
         }
 
         let activeHistoryFilterKey = '';
@@ -2123,25 +1314,18 @@
                 items.sort((a, b) => b.start_date.localeCompare(a.start_date));
                 const latest = items[0];
                 const disp = getHistoryGroupDisplay(key, latest);
-                const prev = items[1] || null;
-                let avgDays = null;
-                if (items.length >= 2) {
-                    let sum = 0;
-                    let cnt = 0;
-                    for (let i = 0; i < items.length - 1; i++) {
-                        const d1 = parseLocalDate(items[i].start_date);
-                        const d2 = parseLocalDate(items[i + 1].start_date);
-                        if (d1 && d2) {
-                            sum += Math.round((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
-                            cnt++;
-                        }
-                    }
-                    if (cnt > 0) avgDays = Math.round(sum / cnt);
-                }
-                return { key, ...disp, items, latest, prev, avgDays };
+                return { key, ...disp, items, latest };
             });
 
-            groups.sort((a, b) => b.latest.start_date.localeCompare(a.latest.start_date));
+            // 経過日数順（前回開催終了からの経過日数が長い順＝長く来ていない順、開催中・開催前は末尾側へ）
+            groups.sort((a, b) => {
+                const aEnd = a.latest.end_date || a.latest.start_date;
+                const bEnd = b.latest.end_date || b.latest.start_date;
+                const aDiff = diffDaysFromToday(aEnd) ?? 0;
+                const bDiff = diffDaysFromToday(bEnd) ?? 0;
+                if (aDiff !== bDiff) return aDiff - bDiff;
+                return a.latest.start_date.localeCompare(b.latest.start_date);
+            });
 
             if (activeHistoryFilterKey) {
                 groups = groups.filter(g => g.key === activeHistoryFilterKey);
@@ -2162,9 +1346,18 @@
             body.innerHTML = groups.map(g => {
                 const st = getCategoryStyle(g.category, false);
                 const latestColor = g.latest.color || getDefaultColorForEvent(g.category, g.latest.title);
-                const avgBadge = g.avgDays !== null
-                    ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold">平均間隔：約${g.avgDays}日</span>`
-                    : `<span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">初回・1回のみ</span>`;
+                const latestEnd = g.latest.end_date || g.latest.start_date;
+                const sinceEnd = diffDaysFromToday(latestEnd);
+                const sinceStart = diffDaysFromToday(g.latest.start_date);
+                const isRunningNow = (sinceStart !== null && sinceStart <= 0) && (sinceEnd !== null && sinceEnd >= 0);
+                const elapsedText = isRunningNow
+                    ? (sinceEnd === 0 ? '本日最終日' : '開催中')
+                    : (sinceEnd !== null && sinceEnd < 0)
+                        ? `終了から${Math.abs(sinceEnd)}日経過`
+                        : '開催前';
+                const statusBadge = `<div class="flex items-center gap-1 flex-wrap">
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 font-bold">${escapeHtml(elapsedText)}</span>
+                </div>`;
 
                 const rowsHtml = g.items.map((it, idx) => {
                     const period = it.start_date === it.end_date
@@ -2178,22 +1371,12 @@
                     const subTitle = (g.category !== 'イベント' && it.title && it.title !== g.category)
                         ? `<div class="text-[10px] text-gray-600 truncate pl-1">${escapeHtml(it.title)}</div>`
                         : '';
-                    let gapStr = '';
-                    if (idx < g.items.length - 1) {
-                        const dCur = parseLocalDate(it.start_date);
-                        const dOlder = parseLocalDate(g.items[idx + 1].start_date);
-                        if (dCur && dOlder) {
-                            const gap = Math.round((dCur.getTime() - dOlder.getTime()) / (1000 * 60 * 60 * 24));
-                            gapStr = `<span class="text-[9px] text-gray-400">(${gap}日ぶり)</span>`;
-                        }
-                    }
                     return `
                         <button type="button" onclick="closeHistoryModal(); jumpToSchedule('${it.start_date}', '${it.end_date}')" class="w-full text-left py-1.5 px-2 rounded-lg hover:bg-purple-50/80 transition-colors flex flex-col gap-0.5">
                             <div class="flex items-center justify-between gap-1.5">
                                 <div class="flex items-center gap-1.5">
                                     ${tag}
                                     <span class="text-[11px] font-bold text-gray-800">${period}</span>
-                                    ${gapStr}
                                 </div>
                                 <span class="text-[10px] text-purple-500 font-bold">移動 →</span>
                             </div>
@@ -2209,7 +1392,7 @@
                                 <span class="text-[10px] px-2 py-0.5 rounded-md border font-bold ${st.pillBg}">${escapeHtml(g.category)}</span>
                                 <span class="text-xs font-extrabold text-gray-900">${escapeHtml(g.label)}</span>
                             </div>
-                            ${avgBadge}
+                            ${statusBadge}
                         </div>
                         <div class="divide-y divide-gray-100 border-t border-gray-100 pt-1">
                             ${rowsHtml}
@@ -2219,188 +1402,23 @@
             }).join('');
         }
 
-        // 保存モーダル
-        function updateSyncStatusBox() {
-            const box = document.getElementById('syncStatusBox');
-            if (!box) return;
-            const gachaCnt = allSchedules.filter(e => e._isPureGacha).length;
-            const eventCnt = allSchedules.filter(e => !e._isPureGacha).length;
-            const lastDayCnt = allSchedules.filter(e => e._isLastDay).length;
-            box.textContent = `登録中：ガチャ ${gachaCnt}件 / イベント ${eventCnt}件（本日最終日: ${lastDayCnt}件）`;
-        }
+        // 日別アクセス計測（Supabase: page_views テーブル）
+        const ACCESS_LOG_STORAGE_KEY = 'poketui_cal_last_pv_date';
 
-        function normalizeCalReleaseType(val) {
-            const raw = String(val || '').trim();
-            if (!raw) return 'gacha';
-            const low = raw.toLowerCase();
-            if (low === 'gacha' || low === 'hapigacha' || raw === 'ガチャ' || raw === 'ハピガチャ') return 'gacha';
-            if (low === 'fukubukuro' || raw === '福袋') return 'fukubukuro';
-            if (low === 'dreamfes' || raw === 'ドリフェス') return 'dreamfes';
-            if (low === 'choicebag' || raw === 'チョイスバッグ') return 'choicebag';
-            return low;
-        }
-
-        let gachaTypeFixGroups = [];
-
-        async function openGachaTypeFixModal() {
-            closeSaveModal();
-            document.getElementById('gachaTypeFixModal').classList.remove('hidden');
-            await loadGachaTypeFixGroups();
-        }
-
-        function closeGachaTypeFixModal() {
-            document.getElementById('gachaTypeFixModal').classList.add('hidden');
-        }
-
-        async function loadGachaTypeFixGroups() {
-            const summaryEl = document.getElementById('gachaTypeFixSummary');
-            const listEl = document.getElementById('gachaTypeFixList');
-            const allBtn = document.getElementById('gachaTypeFixAllBtn');
-            summaryEl.textContent = 'データを読み込み中...';
-            listEl.innerHTML = '';
-            allBtn.disabled = true;
-
-            const pageSize = 1000;
-            let from = 0;
-            let rows = [];
-            while (true) {
-                const { data, error } = await supabaseClient
-                    .from('items')
-                    .select('id, gacha_group_name, release_type, gacha_start_date, gacha_end_date')
-                    .not('gacha_group_name', 'is', null)
-                    .range(from, from + pageSize - 1);
-                if (error || !data) break;
-                rows = rows.concat(data);
-                if (data.length < pageSize) break;
-                from += data.length;
-            }
-
-            const map = new Map();
-            rows.forEach(r => {
-                const name = (r.gacha_group_name || '').trim();
-                if (!name) return;
-                const rawRel = (r.release_type || '').trim();
-                const normRel = normalizeCalReleaseType(rawRel);
-                if (!map.has(name)) {
-                    map.set(name, {
-                        name,
-                        rawTypes: new Set(),
-                        normRel,
-                        needsFix: false,
-                        count: 0,
-                        start: r.gacha_start_date || '',
-                        end: r.gacha_end_date || ''
-                    });
-                }
-                const g = map.get(name);
-                g.count++;
-                g.rawTypes.add(rawRel || '(空欄)');
-                if (rawRel !== normRel) {
-                    g.needsFix = true;
-                }
-            });
-
-            gachaTypeFixGroups = Array.from(map.values()).sort((a, b) => {
-                if (a.needsFix !== b.needsFix) return a.needsFix ? -1 : 1;
-                return (b.start || '').localeCompare(a.start || '') || a.name.localeCompare(b.name, 'ja');
-            });
-
-            const fixTargetCount = gachaTypeFixGroups.filter(g => g.needsFix).length;
-            summaryEl.textContent = fixTargetCount > 0
-                ? `⚠️ 表記ゆれ（Hapigacha等）：${fixTargetCount}件のガチャ`
-                : `✅ 表記ゆれはありません（全${gachaTypeFixGroups.length}件正常）`;
-            allBtn.disabled = fixTargetCount === 0;
-
-            if (!gachaTypeFixGroups.length) {
-                listEl.innerHTML = '<div class="text-center py-6 text-gray-400">ガチャデータが見つかりません</div>';
-                return;
-            }
-
-            listEl.innerHTML = gachaTypeFixGroups.map(g => {
-                const rawLabel = Array.from(g.rawTypes).join(', ');
-                const badge = g.needsFix
-                    ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 font-bold">現在: ${escapeHtml(rawLabel)}</span>`
-                    : `<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">${escapeHtml(rawLabel)}</span>`;
-                const actionBtn = g.needsFix
-                    ? `<button type="button" onclick="fixSingleGachaReleaseType('${escapeHtml(g.name)}', '${escapeHtml(g.normRel)}')" class="px-2.5 py-1 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-bold text-[10px] shrink-0">${escapeHtml(g.normRel)}に直す</button>`
-                    : `<span class="text-[10px] text-gray-400 shrink-0">OK</span>`;
-                return `
-                    <div class="p-2.5 rounded-xl border ${g.needsFix ? 'border-rose-300 bg-rose-50/50' : 'border-gray-200 bg-white'} flex items-center justify-between gap-2">
-                        <div class="min-w-0 flex-1 space-y-1">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                ${badge}
-                                <span class="text-[10px] text-gray-400">(${g.count}アイテム)</span>
-                            </div>
-                            <div class="font-bold text-gray-900 truncate">${escapeHtml(g.name)}</div>
-                        </div>
-                        ${actionBtn}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function fixSingleGachaReleaseType(gachaName, targetRel) {
-            const { error } = await supabaseClient
-                .from('items')
-                .update({ release_type: targetRel })
-                .eq('gacha_group_name', gachaName);
-            if (error) {
-                alert('更新に失敗しました:\n' + error.message);
-                return;
-            }
-            await loadGachaTypeFixGroups();
-            await loadAllSchedules();
-        }
-
-        async function fixAllGachaReleaseTypesInCal() {
-            const targets = gachaTypeFixGroups.filter(g => g.needsFix);
-            if (!targets.length) return;
-            if (!confirm(`${targets.length}件のガチャの開催タイプ表記を正しい値（gacha等）へ一括修正しますか？`)) return;
-            for (const g of targets) {
+        async function trackDailyPageView() {
+            try {
+                if (localStorage.getItem(ACCESS_LOG_STORAGE_KEY) === todayStr) return;
                 const { error } = await supabaseClient
-                    .from('items')
-                    .update({ release_type: g.normRel })
-                    .eq('gacha_group_name', g.name);
-                if (error) {
-                    alert(`「${g.name}」の更新に失敗しました:\n` + error.message);
-                    return;
+                    .from('page_views')
+                    .insert([{ view_date: todayStr, page_name: 'calendar' }]);
+                if (!error) {
+                    localStorage.setItem(ACCESS_LOG_STORAGE_KEY, todayStr);
                 }
-            }
-            await loadGachaTypeFixGroups();
-            await loadAllSchedules();
-            alert(`✅ ${targets.length}件の開催タイプ表記を修正しました！`);
-        }
-
-        function openSaveModal() {
-            updateSyncStatusBox();
-            document.getElementById('saveModal').classList.remove('hidden');
-        }
-
-        function closeSaveModal() {
-            document.getElementById('saveModal').classList.add('hidden');
-        }
-
-        function copyScheduleSummary() {
-            const active = allSchedules.filter(e => (e._isActive && !e._isPureGacha) || e._isLastDay);
-            if (active.length === 0) {
-                alert('現在開催中の予定はありません。');
-                return;
-            }
-            const lines = active.map(e => {
-                const copyCatLabel = e._isShortReissue ? 'ツインズシアター' : e.category;
-                const reissueSuffix = e._isShortReissue
-                    ? (e._reissueStatus === 'reissued' ? ' [復刻済]' : e._reissueStatus === 'reissuing' ? ' [復刻中]' : '')
-                    : '';
-                const tag = e._isLastDay ? '【最終日】' : e._isNew ? '【NEW】' : `【${copyCatLabel}】`;
-                return `${tag} ${e.title}${reissueSuffix}（${e.start_date}〜${e.end_date}）`;
-            });
-            const text = lines.join('\n');
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(() => alert('✅ コピーしました！')).catch(() => prompt('コピーしてください:', text));
-            } else {
-                prompt('コピーしてください:', text);
+            } catch (e) {
+                console.warn('PV記録スキップ:', e);
             }
         }
+
     </script>
 </body>
 </html>
