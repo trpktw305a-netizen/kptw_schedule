@@ -540,10 +540,16 @@
             return ev.release_type === 'choicebag' || catLow === 'choicebag';
         }
 
-        // 短期復刻・ツインズシアター（復刻扱い）かどうか
+        // 短期復刻かどうか（ツインズシアターとは別扱い）
         function isShortReissueItem(ev) {
             const cat = String(ev && ev.category || '').trim();
-            return cat === '短期復刻' || cat === 'ツインズシアター';
+            return cat === '短期復刻';
+        }
+
+        // ツインズシアター（短期復刻の福袋）かどうか
+        function isTwinsTheaterItem(ev) {
+            const cat = String(ev && ev.category || '').trim();
+            return cat === 'ツインズシアター';
         }
 
         // 短期復刻の日付ベース状態判定：開催中（復刻中）か、終了日を過ぎたか（復刻済）
@@ -593,6 +599,7 @@
                     _isFukubukuro: fukuOnly,
                     _isChoicebag: choiceOnly,
                     _isShortReissue: isShortReissueItem(ev),
+                    _isTwinsTheater: isTwinsTheaterItem(ev),
                     _reissueStatus: reissueStatus,
                     _isMarkerItem: markerItem,
                     _isLastDay: isLastDayToday,
@@ -623,10 +630,16 @@
             if (cat === 'ツインズメモリー') {
                 return 'ツインズメモリー';
             }
-            if (cat === '短期復刻' || cat === 'ツインズシアター') {
+            if (cat === '短期復刻') {
+                const items = splitMultiTitles(title);
+                const prefix = '短期復刻';
+                if (!items.length || title === '短期復刻') return '短期復刻';
+                return items.length > 1 ? `${prefix}｜${items[0]} ほか` : `${prefix}｜${items[0]}`;
+            }
+            if (cat === 'ツインズシアター') {
                 const items = splitMultiTitles(title);
                 const prefix = 'ツインズシアター';
-                if (!items.length || title === '短期復刻' || title === 'ツインズシアター') return 'ツインズシアター';
+                if (!items.length || title === 'ツインズシアター') return 'ツインズシアター';
                 return items.length > 1 ? `${prefix}｜${items[0]} ほか` : `${prefix}｜${items[0]}`;
             }
             return title || cat;
@@ -1169,18 +1182,24 @@
             }
 
             container.innerHTML = list.map(ev => {
-                const isTheaterReissue = Boolean(ev._isShortReissue);
-                const st = isTheaterReissue
-                    ? { barBg: 'bg-[#8d79a6] text-white', pillBg: 'bg-purple-100 text-purple-700 border-purple-200', icon: '🎬' }
-                    : getCategoryStyle(ev.category, ev._isPureGacha);
-                const displayCategoryLabel = isTheaterReissue ? 'ツインズシアター' : ev.category;
+                const isTwinsTheater = Boolean(ev._isTwinsTheater);
+                const isShortReissue = Boolean(ev._isShortReissue);
+                const st = isTwinsTheater
+                    ? { barBg: 'bg-[#c4839c] text-white', pillBg: 'bg-pink-100 text-pink-800 border-pink-200', icon: '🎬' }
+                    : isShortReissue
+                        ? { barBg: 'bg-[#d48c70] text-white', pillBg: 'bg-orange-100 text-orange-800 border-orange-200', icon: '🔁' }
+                        : getCategoryStyle(ev.category, ev._isPureGacha);
+                const displayCategoryLabel = ev.category;
                 const period = ev.start_date === ev.end_date ? ev.start_date : `${ev.start_date} 〜 ${ev.end_date}`;
                 const isLastOnSelected = ev.end_date === selectedDateStr;
                 const isStartOnSelected = ev.start_date === selectedDateStr;
 
                 let statusBadges = '';
-                if (ev._isShortReissue && ev._reissueStatus === 'reissuing') {
+                if (isShortReissue && ev._reissueStatus === 'reissuing') {
                     statusBadges += `<span class="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full font-extrabold">🔁 復刻中</span>`;
+                }
+                if (isTwinsTheater) {
+                    statusBadges += `<span class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full font-bold">🎁 短期復刻福袋</span>`;
                 }
                 if (isLastOnSelected) {
                     statusBadges += `<span class="text-[10px] bg-rose-400/90 text-white px-2 py-0.5 rounded-full font-extrabold shadow-2xs">⏰ 最終日</span>`;
@@ -1194,7 +1213,7 @@
 
                 const editBtn = '';
 
-                const multiList = (ev.category === 'ツインズメモリー' || isTheaterReissue)
+                const multiList = (ev.category === 'ツインズメモリー' || isTwinsTheater || isShortReissue)
                     ? splitMultiTitles(ev.title)
                     : [];
                 const reissueSubTag = (ev._isShortReissue && ev._reissueStatus === 'reissuing')
