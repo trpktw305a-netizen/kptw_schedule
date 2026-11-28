@@ -336,7 +336,7 @@
         </main>
     </div>
 
-<!-- 開催履歴モーダル（ガチャ・短期復刻以外） -->
+<!-- 開催履歴モーダル（ガチャ以外） -->
     <div id="historyModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50" onclick="if(event.target===this) closeHistoryModal()">
         <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-3 shadow-2xl max-h-[88vh] flex flex-col text-xs">
             <div class="flex justify-between items-start border-b pb-2 shrink-0">
@@ -357,24 +357,11 @@
         </div>
     </div>
 
-
-
-
-
-
-
-
-
-
-
-
-
     <script>
         const SUPABASE_URL = "https://neasnxuvjfxeezrniddh.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_UulPkVCIss_YPb-tkj5T6g_ZVuAPMI7";
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const ADMIN_PASS_STORAGE_KEY = 'poketui_admin_passcode';
         const SPECIAL_CATEGORY_COLORS_KEY = 'poketui_special_category_colors';
         const DEFAULT_SPECIAL_CATEGORY_COLORS = {
             fukubukuro: '#cfa47c',
@@ -392,6 +379,7 @@
 
         const EVENT_CATEGORY_OPTIONS = [
             { value: 'イベント', label: '✨ イベント', defaultColor: '#8d79a6', placeholder: 'イベント名を選択または入力' },
+            { value: 'ドリフェス', label: '🎵 ドリフェス', defaultColor: '#9c7eb8', placeholder: 'ショップ名を複数入力（例：DF17_メルティ♡マシュマロ×キャラメル / ...）' },
             { value: 'ツインズシアター', label: '🎬 ツインズシアター', defaultColor: '#c4839c', placeholder: 'ガチャ・タイトル名を入力' },
             { value: 'ツインズメモリー', label: '📷 ツインズメモリー', defaultColor: '#9b84b8', placeholder: '対象ガチャ最大8個（例：ガチャA / ガチャB / ...）' },
             { value: '短期復刻', label: '🔁 短期復刻', defaultColor: '#d48c70', placeholder: '復刻ガチャ名（複数なら / 区切り）' },
@@ -472,7 +460,6 @@
             }
             return fallbackColor || fixed['その他イベント'] || '#8d79a6';
         }
-        let isAdminUnlocked = false;
 
         const todayObj = new Date();
         const todayZero = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate());
@@ -540,6 +527,14 @@
             return ev.release_type === 'choicebag' || catLow === 'choicebag';
         }
 
+        // ドリフェス（release_type === 'dreamfes' または category === 'ドリフェス'）かどうか
+        function isDreamfesItem(ev) {
+            if (!ev) return false;
+            const cat = String(ev.category || '').trim();
+            const relLow = String(ev.release_type || '').trim().toLowerCase();
+            return relLow === 'dreamfes' || relLow === 'dorifesu' || cat === 'ドリフェス';
+        }
+
         // 短期復刻かどうか（ツインズシアターとは別扱い）
         function isShortReissueItem(ev) {
             const cat = String(ev && ev.category || '').trim();
@@ -584,6 +579,7 @@
                 const gachaOnly = isPureGachaItem(ev);
                 const fukuOnly = isFukubukuroItem(ev);
                 const choiceOnly = isChoicebagItem(ev);
+                const dreamfesOnly = isDreamfesItem(ev);
                 const markerItem = isMarkerScheduleItem(ev);
                 // 今日が最終日かどうか（上部バナー用）
                 const isLastDayToday = Boolean(end && end === todayStr && start <= todayStr);
@@ -598,6 +594,7 @@
                     _isPureGacha: gachaOnly,
                     _isFukubukuro: fukuOnly,
                     _isChoicebag: choiceOnly,
+                    _isDreamfes: dreamfesOnly,
                     _isShortReissue: isShortReissueItem(ev),
                     _isTwinsTheater: isTwinsTheaterItem(ev),
                     _reissueStatus: reissueStatus,
@@ -613,7 +610,7 @@
 
         function splitMultiTitles(rawTitle) {
             return String(rawTitle || '')
-                .split(/(?:\r?\n|\s+\/\s+|／|・|、|,)+/)
+                .split(/(?:\r?\n|\s+\/\s+|／)+/)
                 .map(s => s.trim())
                 .filter(Boolean);
         }
@@ -626,6 +623,12 @@
             }
             if (ev._isChoicebag) {
                 return title && title.toLowerCase() !== 'choicebag' ? `choicebag｜${title}` : 'choicebag';
+            }
+            if (cat === 'ドリフェス' || ev._isDreamfes) {
+                return 'ドリフェス';
+            }
+            if (cat === 'ドリフェス' || ev._isDreamfes) {
+                return 'ドリフェス';
             }
             if (cat === 'ツインズメモリー') {
                 return 'ツインズメモリー';
@@ -680,11 +683,6 @@
             document.addEventListener('DOMContentLoaded', initApp);
         } else {
             initApp();
-        }
-
-        async function reloadAllData() {
-            await loadAllSchedules();
-            updateSyncStatusBox();
         }
 
         async function loadAllSchedules() {
@@ -755,8 +753,28 @@
                 });
 
                 const specialCatColors = getSpecialCategoryColors();
+                const dreamfesBuckets = new Map();
                 gachaMap.forEach((info, name) => {
-                    const relType = info.releaseType || 'gacha';
+                    const rawRelType = String(info.releaseType || 'gacha').trim();
+                    const relType = normalizeCalReleaseType(rawRelType);
+                    if (relType === 'dreamfes') {
+                        const dfPrefixMatch = name.match(/^(DF\d+)/i);
+                        const bucketKey = dfPrefixMatch
+                            ? `df_${dfPrefixMatch[1].toUpperCase()}_${info.start}_${info.end}`
+                            : `df_${info.start}_${info.end}`;
+                        if (!dreamfesBuckets.has(bucketKey)) {
+                            dreamfesBuckets.set(bucketKey, {
+                                start: info.start,
+                                end: info.end,
+                                shops: []
+                            });
+                        }
+                        const b = dreamfesBuckets.get(bucketKey);
+                        if (info.start && (!b.start || info.start < b.start)) b.start = info.start;
+                        if (info.end && (!b.end || info.end > b.end)) b.end = info.end;
+                        b.shops.push(name);
+                        return;
+                    }
                     const catLabel = ({ gacha: 'ガチャ', fukubukuro: '福袋', dreamfes: 'ドリフェス', choicebag: 'Choicebag' }[relType] || 'イベント');
                     combined.push({
                         id: `gacha_${name}`,
@@ -766,9 +784,63 @@
                         release_type: relType,
                         start_date: info.start,
                         end_date: info.end,
-                        color: specialCatColors[relType] || null
+                        color: specialCatColors[relType] || specialCatColors[catLabel] || null
                     });
                 });
+
+                dreamfesBuckets.forEach((b, bucketKey) => {
+                    b.shops.sort((a, c) => a.localeCompare(c, 'ja'));
+                    combined.push({
+                        id: `dreamfes_${bucketKey}`,
+                        source: 'gacha',
+                        title: b.shops.join(' / '),
+                        category: 'ドリフェス',
+                        release_type: 'dreamfes',
+                        start_date: b.start,
+                        end_date: b.end,
+                        color: specialCatColors['ドリフェス'] || specialCatColors.dreamfes || '#9c7eb8'
+                    });
+                });
+
+                // 同じ開催期間のドリフェス（events側の「ドリフェス」枠・ショップ登録枠・items由来のdorifesu枠）が重複して複数バーにならないよう統合
+                const mergedCombined = [];
+                const dfEntries = [];
+                combined.forEach(item => {
+                    const isDf = item.category === 'ドリフェス' || item.release_type === 'dreamfes' || (item.category === 'イベント' && (item.title || '').trim() === 'ドリフェス');
+                    if (!isDf) {
+                        mergedCombined.push(item);
+                        return;
+                    }
+                    const s = item.start_date || '';
+                    const e = item.end_date || s;
+                    const existing = dfEntries.find(x => !(x.end_date < s || x.start_date > e));
+                    const newShops = (item.title && item.title.trim() !== 'ドリフェス') ? splitMultiTitles(item.title) : [];
+                    if (!existing) {
+                        const normalized = {
+                            ...item,
+                            category: 'ドリフェス',
+                            release_type: 'dreamfes',
+                            title: newShops.length ? newShops.join(' / ') : 'ドリフェス',
+                            _mergedShopSet: new Set(newShops)
+                        };
+                        dfEntries.push(normalized);
+                        mergedCombined.push(normalized);
+                    } else {
+                        if (s && (!existing.start_date || s < existing.start_date)) existing.start_date = s;
+                        if (e && (!existing.end_date || e > existing.end_date)) existing.end_date = e;
+                        newShops.forEach(sh => existing._mergedShopSet.add(sh));
+                        if (existing._mergedShopSet.size > 0) {
+                            existing.title = Array.from(existing._mergedShopSet).join(' / ');
+                        }
+                        if (item.source === 'event') {
+                            existing.id = item.id;
+                            existing.source = 'event';
+                            if (item.color) existing.color = item.color;
+                        }
+                    }
+                });
+                combined.length = 0;
+                combined.push(...mergedCombined);
             } catch (err) {
                 console.warn('読み込みエラー:', err);
             }
@@ -821,7 +893,7 @@
                         ${leftBadge}
                         ${extraNewBadge}
                         <span class="shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-bold ${st.pillBg}">${escapeHtml(ev.category)}</span>
-                        <span class="text-xs font-extrabold text-gray-900 truncate">${escapeHtml(ev.title)}</span>
+                        <span class="text-xs font-extrabold text-gray-900 truncate">${escapeHtml(ev._isDreamfes ? 'ドリフェス' : ev.title)}</span>
                         <span class="shrink-0 text-[10px] font-bold text-gray-500">〜${formatShortMD(ev.end_date)}</span>
                     </button>
                 `;
@@ -1211,15 +1283,14 @@
                     statusBadges += `<span class="text-[10px] bg-gradient-to-r from-pink-500 to-amber-500 text-white px-2 py-0.5 rounded-full font-extrabold">NEW</span>`;
                 }
 
-                const editBtn = '';
-
-                const multiList = (ev.category === 'ツインズメモリー' || isTwinsTheater || isShortReissue)
+                const isDreamfes = Boolean(ev._isDreamfes || ev.category === 'ドリフェス');
+                const multiList = (ev.category === 'ツインズメモリー' || isTwinsTheater || isShortReissue || isDreamfes)
                     ? splitMultiTitles(ev.title)
                     : [];
                 const reissueSubTag = (ev._isShortReissue && ev._reissueStatus === 'reissuing')
                     ? `<span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold shrink-0">復刻中</span>`
                     : '';
-                const isTwinsMemoryMulti = ev.category === 'ツインズメモリー' && multiList.length >= 4;
+                const isTwinsMemoryMulti = (ev.category === 'ツインズメモリー' || isDreamfes) && multiList.length >= 4;
                 const titleBlockHtml = multiList.length > 1
                     ? `<div class="${isTwinsMemoryMulti ? 'grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1' : 'space-y-1'} pt-0.5">
                         ${multiList.map(t => `<div class="text-xs font-bold text-gray-900 flex items-center gap-1 min-w-0"><span class="text-pink-400 shrink-0">・</span><span class="truncate">${escapeHtml(t)}</span>${reissueSubTag}</div>`).join('')}
@@ -1236,18 +1307,17 @@
                             </div>
                             ${titleBlockHtml}
                         </div>
-                        ${editBtn}
                     </div>
                 `;
             }).join('');
         }
 
-        // 開催履歴（ガチャ・短期復刻以外）
+        // 開催履歴（ガチャ以外すべて：カテゴリごとに1グループ）
         function isHistoryTargetSchedule(ev) {
             if (!ev || !ev.start_date) return false;
             if (ev._isPureGacha) return false;
             const cat = (ev.category || '').trim();
-            if (cat === 'ガチャ' || cat === '短期復刻') return false;
+            if (cat === 'ガチャ') return false;
             return true;
         }
 
@@ -1264,8 +1334,14 @@
             if (cat === 'イベント') {
                 return `イベント::${(ev.title || '').trim()}`;
             }
+            if (cat === '短期復刻') {
+                return '短期復刻';
+            }
             if (cat === 'ツインズシアター') {
                 return 'ツインズシアター';
+            }
+            if (cat === 'ツインズメモリー') {
+                return 'ツインズメモリー';
             }
             if (catLow === 'choicebag' || ev._isChoicebag) {
                 return 'choicebag';
@@ -1280,9 +1356,6 @@
             if (groupKey.startsWith('イベント::')) {
                 const name = groupKey.slice('イベント::'.length);
                 return { category: 'イベント', label: name || 'イベント' };
-            }
-            if (groupKey === 'ツインズシアター') {
-                return { category: 'ツインズシアター', label: 'ツインズシアター' };
             }
             return { category: groupKey, label: groupKey };
         }
@@ -1419,6 +1492,17 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function normalizeCalReleaseType(val) {
+            const raw = String(val || '').trim();
+            if (!raw) return 'gacha';
+            const low = raw.toLowerCase();
+            if (low === 'gacha' || low === 'hapigacha' || raw === 'ガチャ' || raw === 'ハピガチャ') return 'gacha';
+            if (low === 'fukubukuro' || raw === '福袋') return 'fukubukuro';
+            if (low === 'dreamfes' || low === 'dorifesu' || raw === 'ドリフェス') return 'dreamfes';
+            if (low === 'choicebag' || raw === 'チョイスバッグ') return 'choicebag';
+            return low;
         }
 
         // 日別アクセス計測（Supabase: page_views テーブル）
